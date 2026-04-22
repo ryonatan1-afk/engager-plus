@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST http://localhost:3000/api/digest/test -H \"Content-Type: application/json\" -d '{\"email\":\"ryonatan1@gmail.com\"}')",
+      "Bash(npx prisma *)",
+      "Bash(node -e 'require\\('\\\\''dotenv'\\\\''\\).config\\(\\); const {PrismaClient}=require\\('\\\\''./node_modules/@prisma/client'\\\\''\\); const p=new PrismaClient\\(\\); p.holidayMatch.updateMany\\({data:{notifiedAt:null}}\\).then\\(\\(\\)=>p.$disconnect\\(\\)\\);')",
+      "PowerShell(Stop-Process *)",
+      "Bash(node -e 'require\\('\\\\''dotenv'\\\\''\\).config\\(\\); const {PrismaClient}=require\\('\\\\''./node_modules/@prisma/client'\\\\''\\); const p=new PrismaClient\\(\\); p.holidayMatch.updateMany\\({data:{notifiedAt:null}}\\).then\\(r=>{console.log\\('\\\\''reset'\\\\'',r.count\\); return p.$disconnect\\(\\);}\\);')",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

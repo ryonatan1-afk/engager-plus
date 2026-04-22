@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LocationStatus {
+  resolved
+  inferred
+  unknown
+}
+
+enum HolidayType {
+  national
+  religious
+  cultural
+}
+
+enum HolidaySource {
+  nager
+  openholidays
+}
+
+model Contact {
+  id             String         @id @default(uuid())
+  hsObjectId     String         @unique @map("hs_object_id")
+  firstName      String?        @map("first_name")
+  lastName       String?        @map("last_name")
+  email          String?
+  countryIso     String?        @map("country_iso") @db.Char(2)
+  company        String?
+  ownerId        String?        @map("owner_id")
+  lastActivityAt DateTime?      @map("last_activity_at") @db.Timestamptz
+  locationStatus LocationStatus @default(unknown) @map("location_status")
+  syncedAt       DateTime       @default(now()) @map("synced_at") @db.Timestamptz
+
+  matches HolidayMatch[]
+
+  @@map("contacts")
+}
+
+model Holiday {
+  id         String        @id @default(uuid())
+  countryIso String        @map("country_iso") @db.Char(2)
+  name       String
+  date       DateTime      @db.Date
+  type       HolidayType
+  source     HolidaySource
+  year       Int
+
+  matches HolidayMatch[]
+
+  @@unique([countryIso, name, date, source])
+  @@map("holidays")
+}
+
+model HolidayMatch {
+  id         String    @id @default(uuid())
+  contactId  String    @map("contact_id")
+  holidayId  String    @map("holiday_id")
+  alert7d    Boolean   @default(false) @map("alert_7d")
+  alert1d    Boolean   @default(false) @map("alert_1d")
+  weekOf     DateTime  @map("week_of") @db.Date
+  notifiedAt DateTime? @map("notified_at") @db.Timestamptz
+
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  holiday  Holiday  @relation(fields: [holidayId], references: [id], onDelete: Cascade)
+  greeting Greeting?
+
+  @@unique([contactId, holidayId])
+  @@map("holiday_matches")
+}
+
+model Greeting {
+  id          String   @id @default(uuid())
+  matchId     String   @unique @map("match_id")
+  body        String
+  subject     String?
+  generatedAt DateTime @default(now()) @map("generated_at") @db.Timestamptz
+  model       String
+
+  match HolidayMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("greetings")
+}
+
+model Owner {
+  hsOwnerId      String    @id @map("hs_owner_id")
+  email          String
+  firstName      String?   @map("first_name")
+  timezone       String?
+  syncedAt       DateTime  @default(now()) @map("synced_at") @db.Timestamptz
+  unsubscribedAt DateTime? @map("unsubscribed_at") @db.Timestamptz
+
+  @@map("owners")
+}
+
+model OAuthToken {
+  id           Int      @id @default(autoincrement())
+  accessToken  String   @map("access_token")
+  refreshToken String   @map("refresh_token")
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("oauth_tokens")
+}
