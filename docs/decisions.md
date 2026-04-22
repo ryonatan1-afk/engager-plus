@@ -147,6 +147,55 @@ A log of key decisions made during planning, and why. Reference this before prop
 
 ---
 
+## Email provider: switched from Mailjet to Resend
+**Decision**: Replace Mailjet with Resend for digest delivery.
+**Why**: Mailjet account was suspended. Resend has simpler signup (GitHub login), a generous free tier, and a cleaner API. Code change was isolated to `src/digest/sender.ts`.
+**Sender**: `digest@getrapport.app` — verified via Resend's Cloudflare auto-configuration.
+
+---
+
+## Greeting output: JSON with subject + body
+**Decision**: Claude returns `{"subject": "...", "body": "..."}` JSON instead of plain text.
+**Why**: The digest email needs a subject line for the mailto draft button. Storing subject alongside body avoids regenerating greetings at send time. Falls back gracefully — if JSON parse fails, raw text is used as body with null subject.
+**Schema**: `subject String?` added to `Greeting` model (nullable for backwards compatibility).
+
+---
+
+## Mailto draft button: pre-filled email draft per contact card
+**Decision**: Each contact card in the digest includes an "Open draft in email app" button — a `mailto:` link with To, Subject, and Body pre-filled.
+**Why**: Removes friction from the rep's workflow. One click opens a ready-to-send email. Body prefixed with `Hi [firstname],\r\n\r\n` at template render time (not stored in DB) so the greeting body stays clean for other uses. Email address is NOT encoded in the mailto href (only query params are encoded) to avoid `%40` breaking the To field.
+
+---
+
+## Smart digest: scoring, dedup, urgency tightening (Phase 7)
+**Decision**: Contacts are scored before digest rendering; digest shows max 10 curated cards.
+**Scoring**: relationship recency (0–3) × 2 + holiday significance (0–2). Sorted descending.
+**Dedup**: one holiday per contact per week — highest significance wins, then soonest date.
+**Urgency**: 6–7 day cards suppressed unless score ≥ 4. Three sections: TODAY/TOMORROW, THIS WEEK, LATER THIS WEEK.
+**Why**: Prevents wall-of-cards problem in busy weeks. Reps see 3–8 high-signal contacts, not 20.
+
+---
+
+## Holiday significance: stored at ingest, not computed at query time
+**Decision**: `significance` enum (`major`, `cultural`, `minor`) stored on the `holidays` table.
+**Why**: Computed at ingest where the source is known (Nager = major, OpenHolidays = cultural). Avoids re-deriving significance on every digest query. Stored as a Prisma enum so invalid values are rejected at DB level.
+
+---
+
+## Deployment: Railway (single service)
+**Decision**: Deploy to Railway, not Render or Fly.io.
+**Why**: Render's free tier sleeps — cron jobs would miss Monday 7am fires. Railway's $5/month credit covers a small Node.js service and never sleeps. Single service (Express + cron in one process) keeps deployment simple.
+**PORT**: Do NOT set PORT in Railway env vars — Railway injects its own and the app uses `process.env.PORT` correctly.
+**DATABASE_URL**: Remove `&channel_binding=require` from the Neon connection string — this param causes connection failures from Railway's network.
+
+---
+
+## Branding: Rapport / getrapport.app
+**Decision**: Product name is Rapport. Domain is getrapport.app registered on Cloudflare Registrar.
+**Why**: "Rapport" is vocabulary reps already use. No existing SaaS product found with this name. `.app` TLD signals a modern product. `getrapport.app` follows the `get[productname].app` convention common in SaaS.
+
+---
+
 ## Error alerting: email via Mailjet to ALERT_EMAIL
 **Decision**: Cron job failures send a plain-text alert email to `ALERT_EMAIL` via `src/lib/alert.ts`.
 **Why**: Simplest possible alerting with no extra dependencies. Covers the most important failure modes (sync, matcher, greeting gen, digest send) before real users depend on the tool. Upgrade to a proper alerting service (PagerDuty, Sentry) post-launch if needed.

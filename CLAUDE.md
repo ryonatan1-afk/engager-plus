@@ -1,7 +1,7 @@
 # Holiday digest — Claude Code context
 
 ## What this project is
-A HubSpot-embedded tool that surfaces upcoming holidays for a rep's contacts and generates AI-powered greetings. Contacts are pulled from HubSpot CRM, filtered by activity, matched to holidays by country, and delivered via a weekly Monday morning email digest. There is also an in-CRM card (HubSpot UI Extension) showing upcoming holidays on each contact record.
+**Rapport** (`getrapport.app`) — a backend service that surfaces upcoming holidays for a sales rep's HubSpot contacts and generates AI-powered greetings. Contacts are pulled from HubSpot CRM, filtered by activity, matched to holidays by country, and delivered via a weekly Monday morning email digest. Each card includes a mailto button that opens a pre-filled draft email in the rep's email client.
 
 ## Tech stack
 - **Runtime**: Node.js 20+ with TypeScript
@@ -11,8 +11,8 @@ A HubSpot-embedded tool that surfaces upcoming holidays for a rep's contacts and
 - **HubSpot**: `@hubspot/api-client` — OAuth private app
 - **Holiday data**: Nager.Date API (national) + Open Holidays API (religious/cultural)
 - **AI greetings**: Anthropic SDK (`@anthropic-ai/sdk`) — claude-sonnet-4-6
-- **Email**: Mailjet (digest delivery)
-- **HubSpot card**: HubSpot UI Extensions SDK (React)
+- **Email**: Resend (`resend` npm package) — sending from `digest@getrapport.app`
+- **HubSpot card**: deferred (reps don't live in HubSpot)
 - **Package manager**: npm
 - **Testing**: Vitest
 
@@ -70,13 +70,19 @@ HUBSPOT_CLIENT_ID
 HUBSPOT_CLIENT_SECRET
 HUBSPOT_REDIRECT_URI
 ANTHROPIC_API_KEY
-DATABASE_URL
-MAILJET_API_KEY
-MAILJET_SECRET_KEY
-DIGEST_FROM_EMAIL        # sender address (e.g. digest@yourdomain.com)
-MAILJET_SANDBOX          # set to "true" to process sends without delivering (dev/test)
-ALERT_EMAIL              # where cron failure alerts are sent (optional but recommended)
+DATABASE_URL             # Neon — remove &channel_binding=require for Railway compatibility
+RESEND_API_KEY
+DIGEST_FROM_EMAIL        # e.g. digest@getrapport.app (must be verified in Resend)
+ALERT_EMAIL              # where cron failure alerts are sent
+BASE_URL                 # e.g. https://engager-plus-production.up.railway.app (for unsubscribe links)
+NODE_ENV                 # set to "production" on Railway
 ```
+
+## Deployment
+- **Production**: Railway — `engager-plus-production.up.railway.app`
+- **Start command**: `npm run build && npm start`
+- **Do NOT set PORT** in Railway env vars — Railway injects it automatically
+- **GitHub**: https://github.com/ryonatan1-afk/engager-plus
 
 ## Greeting generation
 - `src/greeting/prompt.ts` — pure `buildPrompt()` function + `SYSTEM_PROMPT`; no side effects, fully unit-testable
@@ -84,20 +90,26 @@ ALERT_EMAIL              # where cron failure alerts are sent (optional but reco
 - Contacts without a `firstName` are silently skipped (can't personalise)
 - Rep name (`repFirstName`) falls back to `"there"` if owner not found
 
-## Digest (Phase 4)
-- `src/digest/builder.ts` — `buildDigests(weekOf)`: queries unnotified matches grouped by owner; `getThisMonday()` anchors the week
-- `src/digest/template.ts` — `buildDigestHtml()` produces the HTML email; `buildDigestText()` produces console output for preview
-- `src/digest/sender.ts` — `sendDigestEmail()` wraps the Mailjet v3.1 send API; reads `MAILJET_API_KEY` / `MAILJET_SECRET_KEY` / `DIGEST_FROM_EMAIL`
-- `src/digest/index.ts` — `sendWeeklyDigests()`: timezone-aware orchestrator (checks if it's 7am local per owner); `sendTestDigest(email)`: sends first owner's data to a test address
+## Digest (Phase 4 + Phase 7)
+- `src/digest/builder.ts` — `buildDigests(weekOf)`: scores contacts (relationship × 2 + significance), deduplicates to one holiday per contact, filters 6–7 day cards below score threshold, caps at 10 cards
+- `src/digest/template.ts` — `buildDigestHtml()` produces HTML email with TODAY/TOMORROW, THIS WEEK, LATER THIS WEEK sections; each card has a mailto button pre-filled with To/Subject/Body; `buildDigestText()` for console preview
+- `src/digest/sender.ts` — `sendDigestEmail()` wraps Resend API; reads `RESEND_API_KEY` / `DIGEST_FROM_EMAIL`
+- `src/digest/index.ts` — `sendWeeklyDigests()`: timezone-aware orchestrator; `sendTestDigest(email)`: sends first owner's data to test address
 - Cron: every hour on Monday (`0 * * * 1`) — sends to owners for whom it's 7am local
-- API: `POST /api/digest/test { email }` — test send; `POST /api/digest/send` — force-send all (ignores timezone)
-- After send, `notifiedAt` is stamped on each `holiday_match` row so it's excluded from future sends
+- API: `POST /api/digest/test { email }` — test send; `POST /api/digest/send` — force-send all
+- After send, `notifiedAt` is stamped on each `holiday_match` row
 
 ## Holiday engine
-- `src/holidays/nager.ts` — national holidays; filters `global: true` only (regional noise excluded)
-- `src/holidays/openholidays.ts` — religious/cultural; alerts on `startDate` for multi-day events (Eid, Diwali span multiple days)
-- `src/holidays/cache.ts` — `refreshHolidayCacheFromContacts()` pulls distinct country codes from contacts table, then fetches current year + next year from both APIs; `skipDuplicates: true` makes it safe to re-run
-- `src/matcher/matcher.ts` — 14-day rolling window; `weekOf` is always set to the Monday of the holiday's week; `alert7d` = ≤7 days away, `alert1d` = ≤1 day away
+- `src/holidays/nager.ts` — national holidays (`significance: major`); filters `global: true` only
+- `src/holidays/openholidays.ts` — religious/cultural (`significance: cultural`); alerts on `startDate`
+- `src/holidays/cache.ts` — `refreshHolidayCacheFromContacts()` pulls distinct country codes, fetches current + next year from both APIs
+- `src/matcher/matcher.ts` — 14-day rolling window; `weekOf` = Monday of holiday's week; `alert1d` = ≤1 day away
+- **Israel (IL)**: not covered by either Nager or Open Holidays APIs — will produce no matches
+
+## Upcoming work (blueprints in docs/)
+- `docs/plan-security.md` — API key auth, rate limiting, helmet, input validation (~half a day)
+- `docs/plan-multitenancy.md` — Tenant model, per-tenant HubSpot OAuth, scoped queries (3–4 sessions)
+- **Security must be done before multi-tenancy**
 
 ## References (load on demand)
 - Architecture + data flow: `@docs/architecture.md`
