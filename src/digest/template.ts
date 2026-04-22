@@ -55,10 +55,11 @@ export function buildDigestHtml(params: {
   weekOf: Date;
   todayCards: ContactCard[];
   weekCards: ContactCard[];
+  laterCards: ContactCard[];
   totalMatches: number;
   baseUrl: string;
 }): string {
-  const { ownerFirstName, ownerHsId, weekOf, todayCards, weekCards, totalMatches, baseUrl } = params;
+  const { ownerFirstName, ownerHsId, weekOf, todayCards, weekCards, laterCards, totalMatches, baseUrl } = params;
 
   const salutation = ownerFirstName ? `Hi ${ownerFirstName},` : 'Hi,';
   const weekLabel = weekOf.toLocaleDateString('en-US', {
@@ -67,7 +68,7 @@ export function buildDigestHtml(params: {
     timeZone: 'UTC',
   });
 
-  const shown = todayCards.length + weekCards.length;
+  const shown = todayCards.length + weekCards.length + laterCards.length;
   const overflow = totalMatches - shown;
 
   const todaySection =
@@ -80,6 +81,12 @@ export function buildDigestHtml(params: {
     weekCards.length > 0
       ? `<h2 style="font-size:15px;font-weight:700;color:#374151;margin:24px 0 10px;text-transform:uppercase;letter-spacing:.5px;">This Week</h2>
          ${weekCards.map(renderCard).join('')}`
+      : '';
+
+  const laterSection =
+    laterCards.length > 0
+      ? `<h2 style="font-size:15px;font-weight:700;color:#9ca3af;margin:24px 0 10px;text-transform:uppercase;letter-spacing:.5px;">Later This Week</h2>
+         ${laterCards.map(renderCard).join('')}`
       : '';
 
   const overflowFooter =
@@ -110,6 +117,7 @@ export function buildDigestHtml(params: {
 
       ${todaySection}
       ${weekSection}
+      ${laterSection}
       ${overflowFooter}
     </div>
 
@@ -130,10 +138,11 @@ export function buildDigestText(params: {
   weekOf: Date;
   todayCards: ContactCard[];
   weekCards: ContactCard[];
+  laterCards: ContactCard[];
   totalMatches: number;
 }): string {
-  const { ownerFirstName, weekOf, todayCards, weekCards, totalMatches } = params;
-  const shown = todayCards.length + weekCards.length;
+  const { ownerFirstName, weekOf, todayCards, weekCards, laterCards, totalMatches } = params;
+  const shown = todayCards.length + weekCards.length + laterCards.length;
   const overflow = totalMatches - shown;
   const lines: string[] = [];
 
@@ -156,6 +165,17 @@ export function buildDigestText(params: {
     lines.push('THIS WEEK');
     lines.push('-'.repeat(40));
     for (const c of weekCards) {
+      const name = [c.contactFirstName, c.contactLastName].filter(Boolean).join(' ');
+      lines.push(`[ ] ${name} @ ${c.company ?? '?'} — ${c.holidayName} (${c.holidayDate.toISOString().slice(0, 10)})`);
+      if (c.greeting) lines.push(`    "${c.greeting.slice(0, 100)}${c.greeting.length > 100 ? '…' : ''}"`);
+    }
+    lines.push('');
+  }
+
+  if (laterCards.length) {
+    lines.push('LATER THIS WEEK');
+    lines.push('-'.repeat(40));
+    for (const c of laterCards) {
       const name = [c.contactFirstName, c.contactLastName].filter(Boolean).join(' ');
       lines.push(`[ ] ${name} @ ${c.company ?? '?'} — ${c.holidayName} (${c.holidayDate.toISOString().slice(0, 10)})`);
       if (c.greeting) lines.push(`    "${c.greeting.slice(0, 100)}${c.greeting.length > 100 ? '…' : ''}"`);

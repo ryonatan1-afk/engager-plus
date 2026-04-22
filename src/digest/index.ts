@@ -90,8 +90,9 @@ export async function sendTestDigest(toEmail: string): Promise<void> {
 }
 
 async function sendOneDigest(digest: OwnerDigest, weekOf: Date): Promise<void> {
-  const todayCards = digest.cards.filter((c) => c.alert1d);
-  const weekCards = digest.cards.filter((c) => !c.alert1d);
+  const todayCards = digest.cards.filter((c) => c.daysUntil <= 1);
+  const weekCards = digest.cards.filter((c) => c.daysUntil >= 2 && c.daysUntil <= 5);
+  const laterCards = digest.cards.filter((c) => c.daysUntil >= 6);
 
   const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000';
 
@@ -101,6 +102,7 @@ async function sendOneDigest(digest: OwnerDigest, weekOf: Date): Promise<void> {
     weekOf,
     todayCards,
     weekCards,
+    laterCards,
     totalMatches: digest.totalMatches,
     baseUrl,
   });

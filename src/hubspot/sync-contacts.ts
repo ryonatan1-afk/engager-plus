@@ -27,6 +27,9 @@ export interface SyncResult {
  */
 export async function syncContacts(): Promise<SyncResult> {
   const client = await getHubSpotClient();
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - ACTIVE_MONTHS);
+  const cutoffMs = cutoff.getTime();
 
   let cursor: string | undefined;
   let synced = 0;
@@ -34,7 +37,17 @@ export async function syncContacts(): Promise<SyncResult> {
 
   do {
     const response = await client.crm.contacts.searchApi.doSearch({
-      filterGroups: [],
+      filterGroups: [
+        {
+          filters: [
+            {
+              propertyName: 'hs_last_sales_activity_timestamp',
+              operator: 'GTE' as any,
+              value: cutoffMs.toString(),
+            },
+          ],
+        },
+      ],
       properties: CONTACT_PROPERTIES,
       limit: PAGE_SIZE,
       after: cursor as any,

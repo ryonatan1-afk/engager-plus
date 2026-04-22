@@ -11,7 +11,12 @@
       "PowerShell(Stop-Process *)",
       "Bash(node -e 'require\\('\\\\''dotenv'\\\\''\\).config\\(\\); const {PrismaClient}=require\\('\\\\''./node_modules/@prisma/client'\\\\''\\); const p=new PrismaClient\\(\\); p.holidayMatch.updateMany\\({data:{notifiedAt:null}}\\).then\\(r=>{console.log\\('\\\\''reset'\\\\'',r.count\\); return p.$disconnect\\(\\);}\\);')",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(git tag *)"
     ]
   }
 }

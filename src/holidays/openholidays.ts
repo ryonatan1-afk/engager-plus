@@ -1,4 +1,4 @@
-import { HolidayType, HolidaySource } from '@prisma/client';
+import { HolidayType, HolidaySource, HolidaySignificance } from '@prisma/client';
 import type { HolidayRecord } from './nager';
 
 interface OpenHolidayName {
@@ -57,6 +57,7 @@ export async function fetchReligiousHolidays(
     date: new Date(`${h.startDate}T00:00:00.000Z`),
     type: HolidayType.religious,
     source: HolidaySource.openholidays,
+    significance: HolidaySignificance.cultural,
     year: new Date(`${h.startDate}T00:00:00.000Z`).getUTCFullYear(),
   }));
 }

@@ -24,6 +24,12 @@ enum HolidaySource {
   openholidays
 }
 
+enum HolidaySignificance {
+  major
+  cultural
+  minor
+}
+
 model Contact {
   id             String         @id @default(uuid())
   hsObjectId     String         @unique @map("hs_object_id")
@@ -47,9 +53,10 @@ model Holiday {
   countryIso String        @map("country_iso") @db.Char(2)
   name       String
   date       DateTime      @db.Date
-  type       HolidayType
-  source     HolidaySource
-  year       Int
+  type         HolidayType
+  source       HolidaySource
+  significance HolidaySignificance @default(minor)
+  year         Int
 
   matches HolidayMatch[]
 

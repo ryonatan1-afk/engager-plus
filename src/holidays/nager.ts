@@ -1,4 +1,4 @@
-import { HolidayType, HolidaySource } from '@prisma/client';
+import { HolidayType, HolidaySource, HolidaySignificance } from '@prisma/client';
 
 interface NagerApiHoliday {
   date: string;
@@ -14,6 +14,7 @@ export interface HolidayRecord {
   date: Date;
   type: HolidayType;
   source: HolidaySource;
+  significance: HolidaySignificance;
   year: number;
 }
 
@@ -45,6 +46,7 @@ export async function fetchNationalHolidays(
       date: new Date(`${h.date}T00:00:00.000Z`),
       type: HolidayType.national,
       source: HolidaySource.nager,
+      significance: HolidaySignificance.major,
       year,
     }));
 }

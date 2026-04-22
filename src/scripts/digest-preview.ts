@@ -29,12 +29,14 @@ async function main(): Promise<void> {
     const first = digests[0];
     const todayCards = first.cards.filter((c) => c.alert1d);
     const weekCards = first.cards.filter((c) => !c.alert1d);
+    const laterCards = first.cards.filter((c) => c.daysUntil >= 6);
     const html = buildDigestHtml({
       ownerFirstName: first.ownerFirstName,
       ownerHsId: first.ownerId,
       weekOf,
       todayCards,
       weekCards,
+      laterCards,
       totalMatches: first.totalMatches,
       baseUrl: process.env.BASE_URL ?? 'http://localhost:3000',
     });
@@ -50,7 +52,8 @@ async function main(): Promise<void> {
     console.log(`TZ    : ${digest.timezone ?? 'UTC (default)'}`);
     console.log(`Total : ${digest.totalMatches} match${digest.totalMatches === 1 ? '' : 'es'} (showing ${digest.cards.length})`);
     console.log('');
-    console.log(buildDigestText({ ownerFirstName: digest.ownerFirstName, weekOf, todayCards, weekCards, totalMatches: digest.totalMatches }));
+    const laterCards = digest.cards.filter((c) => c.daysUntil >= 6);
+    console.log(buildDigestText({ ownerFirstName: digest.ownerFirstName, weekOf, todayCards, weekCards, laterCards, totalMatches: digest.totalMatches }));
   }
 
   console.log(`\n[digest:preview] ${digests.length} digest${digests.length === 1 ? '' : 's'} ready. Run with --html to dump raw HTML.`);
