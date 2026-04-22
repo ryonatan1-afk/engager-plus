@@ -1,19 +1,20 @@
 # Build plan
 
 ## Current state
-**Date**: 2026-03-31
-**Phase**: Phase 6 partially complete — logging/alerting done, unsubscribe partially done
+**Date**: 2026-04-23
+**Phase**: All phases complete. App live in production.
 
-**Just completed**: Phase 4 (Mailjet digest, full send pipeline). Phase 6 partial: `src/lib/alert.ts` (email alerts on cron failures), timestamps on all scheduler log lines, unsubscribed owners filtered from digest builder, `unsubscribedAt` column added to `owners` table (migrated).
+**Deployed**: Railway (engager-plus-production.up.railway.app)
+**Email**: Resend, sending from digest@getrapport.app
+**Domain**: getrapport.app (Cloudflare Registrar)
+**GitHub**: https://github.com/ryonatan1-afk/engager-plus (v0.2.0)
 
-**Next step**: Finish Phase 6 unsubscribe — add unsubscribe link to email template (`src/digest/template.ts` footer), add `GET /unsubscribe?token=<hsOwnerId>` endpoint to `src/api/index.ts` that sets `unsubscribedAt`. Then run internal test: `npm run digest:preview`, then `POST /api/digest/test { email }`.
+**Next step**: Populate real HubSpot contacts with `hs_last_sales_activity_timestamp` and trigger `POST /api/sync/contacts`. Monday cron handles everything from there.
 
 ---
 
 ## Known issues
-- Phase 6 unsubscribe is half-done: DB column + builder filter exist, but the email footer link and the `/unsubscribe` endpoint are not yet built. Do these before the internal test send so the email is complete.
-- `MAILJET_SANDBOX=true` is set — no emails actually deliver until this is removed and a real sender domain is verified in Mailjet.
-- `DIGEST_FROM_EMAIL` is a placeholder — fine while sandbox is on; must be a Mailjet-verified address before going live.
+- None. Production is healthy.
 
 ---
 
@@ -67,6 +68,14 @@
 
 ## Phase 5 — HubSpot card
 - [ ] DEFERRED — client-facing teams don't live in HubSpot; not critical for MVP. Revisit post-launch if reps ask for in-CRM context.
+
+## Phase 7 — Smart digest (complete, 2026-04-22)
+- [x] Holiday significance field: major (Nager), cultural (OpenHolidays), minor
+- [x] Contact scoring: relationship recency × 2 + holiday significance
+- [x] Dedup: one holiday per contact per week
+- [x] Urgency tightening: 6–7 day cards suppressed if score < 4
+- [x] LATER THIS WEEK section in email template
+- [x] 12-month activity filter re-enabled on contact sync
 
 ## Phase 6 — Refinement
 - [ ] Religious/cultural holiday coverage audit (top 20 countries) — data review, not code
