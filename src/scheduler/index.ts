@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { prisma } from '../db/client';
 import { syncContacts } from '../hubspot/sync-contacts';
 import { syncOwners } from '../hubspot/sync-owners';
 import { refreshHolidayCacheFromContacts } from '../holidays/cache';
@@ -7,49 +8,56 @@ import { generatePendingGreetings } from '../greeting/generator';
 import { sendWeeklyDigests } from '../digest';
 import { sendAlert } from '../lib/alert';
 
+async function getActiveTenants(): Promise<string[]> {
+  const tenants = await prisma.tenant.findMany({ select: { id: true } });
+  return tenants.map((t) => t.id);
+}
+
 /**
- * Registers all cron jobs.
- * Phase 1: daily contact + owner sync.
- * Phase 2: Sunday holiday cache refresh + daily matcher.
- * Phase 3: Sunday night greeting pre-generation.
- * Phase 4: Monday hourly check — sends digest to owners where it is 7am local.
- * Phase 6: sendAlert() on any cron failure.
+ * Registers all cron jobs. Each job that operates on per-tenant data loops
+ * over all tenants. Holiday data (shared) is refreshed once globally.
  */
 export function startScheduler(): void {
-  // Daily incremental contact sync at 2:00 AM
+  // Daily incremental contact sync at 2:00 AM (per tenant)
   cron.schedule('0 2 * * *', async () => {
     console.log(`[scheduler][${ts()}] Starting daily contact sync...`);
-    try {
-      await syncContacts();
-    } catch (err) {
-      console.error(`[scheduler][${ts()}] Daily contact sync failed:`, err);
-      await sendAlert('Daily contact sync failed', err);
+    for (const tenantId of await getActiveTenants()) {
+      try {
+        await syncContacts(tenantId);
+      } catch (err) {
+        console.error(`[scheduler][${ts()}] Contact sync failed for tenant ${tenantId}:`, err);
+        await sendAlert(`Daily contact sync failed (tenant ${tenantId})`, err);
+      }
     }
   });
 
-  // Daily owner sync at 2:15 AM (staggered after contact sync)
+  // Daily owner sync at 2:15 AM (per tenant)
   cron.schedule('15 2 * * *', async () => {
     console.log(`[scheduler][${ts()}] Starting daily owner sync...`);
-    try {
-      await syncOwners();
-    } catch (err) {
-      console.error(`[scheduler][${ts()}] Daily owner sync failed:`, err);
-      await sendAlert('Daily owner sync failed', err);
+    for (const tenantId of await getActiveTenants()) {
+      try {
+        await syncOwners(tenantId);
+      } catch (err) {
+        console.error(`[scheduler][${ts()}] Owner sync failed for tenant ${tenantId}:`, err);
+        await sendAlert(`Daily owner sync failed (tenant ${tenantId})`, err);
+      }
     }
   });
 
-  // Daily holiday matcher at 2:30 AM — keeps alert flags current
+  // Daily holiday matcher at 2:30 AM (per tenant)
   cron.schedule('30 2 * * *', async () => {
     console.log(`[scheduler][${ts()}] Starting daily holiday matcher...`);
-    try {
-      await runMatcher();
-    } catch (err) {
-      console.error(`[scheduler][${ts()}] Daily holiday matcher failed:`, err);
-      await sendAlert('Daily holiday matcher failed', err);
+    for (const tenantId of await getActiveTenants()) {
+      try {
+        await runMatcher(tenantId);
+      } catch (err) {
+        console.error(`[scheduler][${ts()}] Holiday matcher failed for tenant ${tenantId}:`, err);
+        await sendAlert(`Daily holiday matcher failed (tenant ${tenantId})`, err);
+      }
     }
   });
 
-  // Weekly holiday cache refresh: Sunday 3:00 AM — fetches current + next year
+  // Weekly holiday cache refresh: Sunday 3:00 AM — shared across all tenants
   cron.schedule('0 3 * * 0', async () => {
     console.log(`[scheduler][${ts()}] Starting weekly holiday cache refresh...`);
     try {
@@ -60,25 +68,29 @@ export function startScheduler(): void {
     }
   });
 
-  // Sunday 10:00 PM — pre-generate greetings so Monday digest sends fast
+  // Sunday 10:00 PM — pre-generate greetings (per tenant)
   cron.schedule('0 22 * * 0', async () => {
     console.log(`[scheduler][${ts()}] Starting Sunday greeting pre-generation...`);
-    try {
-      await generatePendingGreetings();
-    } catch (err) {
-      console.error(`[scheduler][${ts()}] Sunday greeting pre-generation failed:`, err);
-      await sendAlert('Sunday greeting pre-generation failed', err);
+    for (const tenantId of await getActiveTenants()) {
+      try {
+        await generatePendingGreetings(tenantId);
+      } catch (err) {
+        console.error(`[scheduler][${ts()}] Greeting pre-gen failed for tenant ${tenantId}:`, err);
+        await sendAlert(`Sunday greeting pre-generation failed (tenant ${tenantId})`, err);
+      }
     }
   });
 
-  // Every hour on Monday — sends digest to owners where it is currently 7am local
+  // Every hour on Monday — sends digest to owners where it is currently 7am local (per tenant)
   cron.schedule('0 * * * 1', async () => {
     console.log(`[scheduler][${ts()}] Checking Monday digest sends...`);
-    try {
-      await sendWeeklyDigests();
-    } catch (err) {
-      console.error(`[scheduler][${ts()}] Monday digest send failed:`, err);
-      await sendAlert('Monday digest send failed', err);
+    for (const tenantId of await getActiveTenants()) {
+      try {
+        await sendWeeklyDigests(tenantId);
+      } catch (err) {
+        console.error(`[scheduler][${ts()}] Monday digest send failed for tenant ${tenantId}:`, err);
+        await sendAlert(`Monday digest send failed (tenant ${tenantId})`, err);
+      }
     }
   });
 

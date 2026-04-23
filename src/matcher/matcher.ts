@@ -54,12 +54,12 @@ export function computeFlags(
 }
 
 /**
- * Cross-references all active contacts against upcoming holidays within a
+ * Cross-references a tenant's contacts against upcoming holidays within a
  * 14-day window. Upserts rows into holiday_matches with current alert flags.
  *
  * Run daily so that alert flags stay current as the holiday approaches.
  */
-export async function runMatcher(): Promise<MatchResult> {
+export async function runMatcher(tenantId: string): Promise<MatchResult> {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
@@ -94,6 +94,7 @@ export async function runMatcher(): Promise<MatchResult> {
   for (const [countryIso, countryHolidays] of byCountry) {
     const contacts = await prisma.contact.findMany({
       where: {
+        tenantId,
         countryIso,
         locationStatus: { not: 'unknown' },
       },
@@ -143,6 +144,6 @@ export async function runMatcher(): Promise<MatchResult> {
     }
   }
 
-  console.log(`[matcher] Done. matched=${matched} skipped=${skipped} errors=${errors}`);
+  console.log(`[matcher][${tenantId}] Done. matched=${matched} skipped=${skipped} errors=${errors}`);
   return { matched, skipped, errors };
 }

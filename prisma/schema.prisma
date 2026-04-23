@@ -30,9 +30,23 @@ enum HolidaySignificance {
   minor
 }
 
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String?
+  apiKey    String   @unique @map("api_key")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  contacts Contact[]
+  owners   Owner[]
+  token    OAuthToken?
+
+  @@map("tenants")
+}
+
 model Contact {
   id             String         @id @default(uuid())
-  hsObjectId     String         @unique @map("hs_object_id")
+  tenantId       String         @map("tenant_id")
+  hsObjectId     String         @map("hs_object_id")
   firstName      String?        @map("first_name")
   lastName       String?        @map("last_name")
   email          String?
@@ -43,19 +57,25 @@ model Contact {
   locationStatus LocationStatus @default(unknown) @map("location_status")
   syncedAt       DateTime       @default(now()) @map("synced_at") @db.Timestamptz
 
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   matches HolidayMatch[]
 
+  @@unique([tenantId, hsObjectId])
   @@map("contacts")
 }
 
 model Holiday {
-  id         String        @id @default(uuid())
-  countryIso String        @map("country_iso") @db.Char(2)
-  name       String
-  date       DateTime      @db.Date
+  id           String              @id @default(uuid())
+  countryIso   String              @map("country_iso") @db.Char(2)
+  name         String
+  date         DateTime            @db.Date
   type         HolidayType
   source       HolidaySource
   significance HolidaySignificance @default(minor)
+  solemn       Boolean             @default(false)
+  greetable    Boolean             @default(true)
+  popular      Boolean             @default(false)
+  regional     Boolean             @default(false)
   year         Int
 
   matches HolidayMatch[]
@@ -95,22 +115,29 @@ model Greeting {
 }
 
 model Owner {
-  hsOwnerId      String    @id @map("hs_owner_id")
+  id             String    @id @default(uuid())
+  tenantId       String    @map("tenant_id")
+  hsOwnerId      String    @map("hs_owner_id")
   email          String
   firstName      String?   @map("first_name")
   timezone       String?
   syncedAt       DateTime  @default(now()) @map("synced_at") @db.Timestamptz
   unsubscribedAt DateTime? @map("unsubscribed_at") @db.Timestamptz
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, hsOwnerId])
   @@map("owners")
 }
 
 model OAuthToken {
-  id           Int      @id @default(autoincrement())
+  tenantId     String   @id @map("tenant_id")
   accessToken  String   @map("access_token")
   refreshToken String   @map("refresh_token")
   expiresAt    DateTime @map("expires_at") @db.Timestamptz
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("oauth_tokens")
 }

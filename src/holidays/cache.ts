@@ -4,15 +4,14 @@ import { fetchReligiousHolidays } from './openholidays';
 
 export interface CacheRefreshResult {
   countries: number;
-  inserted: number;
+  upserted: number;
   errors: number;
 }
 
 /**
  * Fetches holidays for the given country codes (current year + next year)
  * from both Nager.Date and Open Holidays API, then upserts them into the
- * holidays table. Safe to re-run — duplicates are skipped via the DB
- * unique constraint (country_iso, name, date, source).
+ * holidays table — including tag updates on existing rows.
  */
 export async function refreshHolidayCache(
   countryCodes: string[],
@@ -20,7 +19,7 @@ export async function refreshHolidayCache(
   const currentYear = new Date().getUTCFullYear();
   const years = [currentYear, currentYear + 1];
 
-  let inserted = 0;
+  let upserted = 0;
   let errors = 0;
 
   for (const countryCode of countryCodes) {
@@ -34,12 +33,27 @@ export async function refreshHolidayCache(
         const records = [...national, ...religious];
         if (!records.length) continue;
 
-        const result = await prisma.holiday.createMany({
-          data: records,
-          skipDuplicates: true,
-        });
-
-        inserted += result.count;
+        for (const record of records) {
+          await prisma.holiday.upsert({
+            where: {
+              countryIso_name_date_source: {
+                countryIso: record.countryIso,
+                name: record.name,
+                date: record.date,
+                source: record.source,
+              },
+            },
+            create: record,
+            // On conflict: only update the classification tags, not core fields
+            update: {
+              greetable: record.greetable,
+              popular: record.popular,
+              regional: record.regional,
+              solemn: record.solemn,
+            },
+          });
+          upserted++;
+        }
       } catch (err) {
         console.error(`[holidayCache] Failed to refresh ${countryCode}/${year}:`, err);
         errors++;
@@ -48,9 +62,9 @@ export async function refreshHolidayCache(
   }
 
   console.log(
-    `[holidayCache] Done. countries=${countryCodes.length} inserted=${inserted} errors=${errors}`,
+    `[holidayCache] Done. countries=${countryCodes.length} upserted=${upserted} errors=${errors}`,
   );
-  return { countries: countryCodes.length, inserted, errors };
+  return { countries: countryCodes.length, upserted, errors };
 }
 
 /**
@@ -68,7 +82,7 @@ export async function refreshHolidayCacheFromContacts(): Promise<CacheRefreshRes
 
   if (!codes.length) {
     console.log('[holidayCache] No contacts with resolved countries — nothing to refresh.');
-    return { countries: 0, inserted: 0, errors: 0 };
+    return { countries: 0, upserted: 0, errors: 0 };
   }
 
   return refreshHolidayCache(codes);

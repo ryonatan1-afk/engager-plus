@@ -66,11 +66,11 @@ function relationshipScore(lastActivityAt: Date | null): number {
 }
 
 /**
- * Queries all unnotified holiday matches for the given week and groups
- * them by owner. Applies dedup (one holiday per contact), scoring,
- * urgency filtering, and caps at CARDS_PER_DIGEST.
+ * Queries all unnotified holiday matches for the given tenant and week, groups
+ * them by owner. Applies dedup (one holiday per contact), scoring, urgency
+ * filtering, and caps at CARDS_PER_DIGEST.
  */
-export async function buildDigests(weekOf: Date): Promise<OwnerDigest[]> {
+export async function buildDigests(tenantId: string, weekOf: Date): Promise<OwnerDigest[]> {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
@@ -78,7 +78,8 @@ export async function buildDigests(weekOf: Date): Promise<OwnerDigest[]> {
     where: {
       weekOf,
       notifiedAt: null,
-      contact: { ownerId: { not: null } },
+      contact: { tenantId, ownerId: { not: null } },
+      holiday: { greetable: true, regional: false },
     },
     include: {
       contact: true,
@@ -100,7 +101,7 @@ export async function buildDigests(weekOf: Date): Promise<OwnerDigest[]> {
 
   const ownerIds = [...byOwner.keys()];
   const owners = await prisma.owner.findMany({
-    where: { hsOwnerId: { in: ownerIds }, unsubscribedAt: null },
+    where: { tenantId, hsOwnerId: { in: ownerIds }, unsubscribedAt: null },
   });
   const ownerMap = new Map(owners.map((o) => [o.hsOwnerId, o]));
 
@@ -127,13 +128,15 @@ export async function buildDigests(weekOf: Date): Promise<OwnerDigest[]> {
     const scored = deduped.map((m) => {
       const days = computeDaysUntil(today, m.holiday.date);
       const relScore = relationshipScore(m.contact.lastActivityAt);
-      const holScore = SIG_SCORE[m.holiday.significance];
+      const holScore = SIG_SCORE[m.holiday.significance] + (m.holiday.popular ? 1 : 0);
       const score = relScore * 2 + holScore;
       return { m, days, score };
     });
 
-    // Drop LATER THIS WEEK (6–7 days) cards below the score threshold
-    const visible = scored.filter(({ days, score }) => days <= 5 || score >= LATER_THRESHOLD);
+    // Drop LATER THIS WEEK (6–7 days) cards below threshold, unless the holiday is popular
+    const visible = scored.filter(({ days, score, m }) =>
+      days <= 5 || score >= LATER_THRESHOLD || m.holiday.popular,
+    );
 
     // Sort: highest score first, then soonest holiday
     visible.sort((a, b) => b.score - a.score || a.days - b.days);

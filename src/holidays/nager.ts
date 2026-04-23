@@ -1,4 +1,5 @@
 import { HolidayType, HolidaySource, HolidaySignificance } from '@prisma/client';
+import { classifyHoliday } from './classify';
 
 interface NagerApiHoliday {
   date: string;
@@ -15,6 +16,10 @@ export interface HolidayRecord {
   type: HolidayType;
   source: HolidaySource;
   significance: HolidaySignificance;
+  solemn: boolean;
+  greetable: boolean;
+  popular: boolean;
+  regional: boolean;
   year: number;
 }
 
@@ -30,7 +35,7 @@ export async function fetchNationalHolidays(
   const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode.toUpperCase()}`;
   const res = await fetch(url);
 
-  if (res.status === 404) return []; // country not covered by Nager
+  if (res.status === 404) return [];
   if (!res.ok) {
     throw new Error(`Nager.Date API error ${res.status} for ${countryCode}/${year}`);
   }
@@ -39,14 +44,20 @@ export async function fetchNationalHolidays(
 
   return data
     .filter((h) => h.global)
-    .map((h) => ({
-      countryIso: countryCode.toUpperCase(),
-      name: h.name,
-      // Parse as UTC midnight to avoid timezone-shifting the date
-      date: new Date(`${h.date}T00:00:00.000Z`),
-      type: HolidayType.national,
-      source: HolidaySource.nager,
-      significance: HolidaySignificance.major,
-      year,
-    }));
+    .map((h) => {
+      const { greetable, popular } = classifyHoliday(h.name);
+      return {
+        countryIso: countryCode.toUpperCase(),
+        name: h.name,
+        date: new Date(`${h.date}T00:00:00.000Z`),
+        type: HolidayType.national,
+        source: HolidaySource.nager,
+        significance: HolidaySignificance.major,
+        solemn: false,
+        greetable,
+        popular,
+        regional: false, // already filtered to global: true above
+        year,
+      };
+    });
 }

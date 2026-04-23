@@ -7,16 +7,15 @@ export interface OwnerSyncResult {
 }
 
 /**
- * Fetches all HubSpot owners (sales reps) and upserts them into the owners table.
- * Owners are used to group digest emails and to inject the rep's first name into greetings.
+ * Fetches all HubSpot owners (sales reps) and upserts them into the owners
+ * table scoped to the given tenant.
  */
-export async function syncOwners(): Promise<OwnerSyncResult> {
-  const client = await getHubSpotClient();
+export async function syncOwners(tenantId: string): Promise<OwnerSyncResult> {
+  const client = await getHubSpotClient(tenantId);
   let synced = 0;
   let errors = 0;
 
   try {
-    // Paginate through all owners (default page size: 100)
     let after: string | undefined;
 
     do {
@@ -30,12 +29,12 @@ export async function syncOwners(): Promise<OwnerSyncResult> {
       for (const owner of response.results) {
         try {
           await prisma.owner.upsert({
-            where: { hsOwnerId: owner.id.toString() },
+            where: { tenantId_hsOwnerId: { tenantId, hsOwnerId: owner.id.toString() } },
             create: {
+              tenantId,
               hsOwnerId: owner.id.toString(),
               email: owner.email ?? '',
               firstName: owner.firstName ?? null,
-              // HubSpot doesn't provide timezone on the owner object — will be set manually
               timezone: null,
               syncedAt: new Date(),
             },
@@ -59,6 +58,6 @@ export async function syncOwners(): Promise<OwnerSyncResult> {
     errors++;
   }
 
-  console.log(`[syncOwners] Done. synced=${synced} errors=${errors}`);
+  console.log(`[syncOwners][${tenantId}] Done. synced=${synced} errors=${errors}`);
   return { synced, errors };
 }

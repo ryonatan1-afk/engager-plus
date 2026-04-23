@@ -74,6 +74,7 @@ DATABASE_URL             # Neon — remove &channel_binding=require for Railway 
 RESEND_API_KEY
 DIGEST_FROM_EMAIL        # e.g. digest@getrapport.app (must be verified in Resend)
 ALERT_EMAIL              # where cron failure alerts are sent
+ADMIN_SECRET             # platform operator secret — used to create tenants via POST /api/tenants/register
 BASE_URL                 # e.g. https://engager-plus-production.up.railway.app (for unsubscribe links)
 NODE_ENV                 # set to "production" on Railway
 ```
@@ -106,10 +107,21 @@ NODE_ENV                 # set to "production" on Railway
 - `src/matcher/matcher.ts` — 14-day rolling window; `weekOf` = Monday of holiday's week; `alert1d` = ≤1 day away
 - **Israel (IL)**: not covered by either Nager or Open Holidays APIs — will produce no matches
 
-## Upcoming work (blueprints in docs/)
-- `docs/plan-security.md` — API key auth, rate limiting, helmet, input validation (~half a day)
-- `docs/plan-multitenancy.md` — Tenant model, per-tenant HubSpot OAuth, scoped queries (3–4 sessions)
-- **Security must be done before multi-tenancy**
+## Multi-tenancy (complete, 2026-04-23)
+- `Tenant` model — every company = one row with a unique `apiKey`
+- `Contact`, `Owner`, `OAuthToken` all scoped to a `tenantId`
+- Auth: `POST /api/tenants/register` (requires `ADMIN_SECRET`) creates a tenant; all `/api/*` routes require tenant API key (`Authorization: Bearer <key>`)
+- OAuth: `GET /auth/hubspot?apiKey=<key>` starts HubSpot OAuth for a tenant; state = tenantId
+- Scheduler loops over all tenants; holiday cache is shared (no tenantId on `Holiday`)
+
+## Upcoming work
+
+## Security (complete)
+- API key auth (`requireApiKey` middleware) on all `/api/*` routes — `Authorization: Bearer <API_SECRET>`
+- `helmet` for security headers
+- `express-rate-limit` on `/api/digest/test` (5/15 min), `/api/sync/*` (10/hr), `/unsubscribe` (20/15 min)
+- Email format validation on `/api/digest/test`
+- `{ "confirm": true }` body guard on `/api/digest/send`
 
 ## References (load on demand)
 - Architecture + data flow: `@docs/architecture.md`

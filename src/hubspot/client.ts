@@ -2,11 +2,11 @@ import { Client } from '@hubspot/api-client';
 import { getValidAccessToken } from './auth';
 
 /**
- * Returns a HubSpot API client configured with a fresh, valid access token.
- * Call this fresh each time you need the client — do not cache the instance
- * across requests since tokens can be refreshed between calls.
+ * Returns a HubSpot API client configured with a fresh, valid access token
+ * for the given tenant. Call this fresh each time — tokens can be refreshed
+ * between calls.
  */
-export async function getHubSpotClient(): Promise<Client> {
-  const accessToken = await getValidAccessToken();
+export async function getHubSpotClient(tenantId: string): Promise<Client> {
+  const accessToken = await getValidAccessToken(tenantId);
   return new Client({ accessToken });
 }

@@ -1,5 +1,6 @@
 import { HolidayType, HolidaySource, HolidaySignificance } from '@prisma/client';
 import type { HolidayRecord } from './nager';
+import { classifyHoliday } from './classify';
 
 interface OpenHolidayName {
   language: string;
@@ -22,6 +23,7 @@ function extractEnName(names: OpenHolidayName[]): string {
 /**
  * Fetches religious and cultural holidays from Open Holidays API for a given country and year.
  * Multi-day events (e.g. Eid, Diwali) alert on startDate only.
+ * Sets regional=true for non-nationwide observances.
  * Returns an empty array if the country has no coverage.
  */
 export async function fetchReligiousHolidays(
@@ -50,14 +52,21 @@ export async function fetchReligiousHolidays(
 
   const data: OpenApiHoliday[] = JSON.parse(text);
 
-  return data.map((h) => ({
-    countryIso: countryCode.toUpperCase(),
-    name: extractEnName(h.name),
-    // Alert on startDate for multi-day holidays
-    date: new Date(`${h.startDate}T00:00:00.000Z`),
-    type: HolidayType.religious,
-    source: HolidaySource.openholidays,
-    significance: HolidaySignificance.cultural,
-    year: new Date(`${h.startDate}T00:00:00.000Z`).getUTCFullYear(),
-  }));
+  return data.map((h) => {
+    const name = extractEnName(h.name);
+    const { greetable, popular } = classifyHoliday(name);
+    return {
+      countryIso: countryCode.toUpperCase(),
+      name,
+      date: new Date(`${h.startDate}T00:00:00.000Z`),
+      type: HolidayType.religious,
+      source: HolidaySource.openholidays,
+      significance: HolidaySignificance.cultural,
+      solemn: false,
+      greetable,
+      popular,
+      regional: !h.nationwide,
+      year: new Date(`${h.startDate}T00:00:00.000Z`).getUTCFullYear(),
+    };
+  });
 }

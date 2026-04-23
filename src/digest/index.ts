@@ -30,7 +30,7 @@ function isSevenAmLocal(timezone: string | null): boolean {
 }
 
 /**
- * Sends the weekly digest to all reps whose local time is 7am.
+ * Sends the weekly digest to all reps for the given tenant whose local time is 7am.
  * Called by the Monday hourly cron — runs every hour, sends only to owners
  * for whom it is currently 7am in their timezone.
  *
@@ -38,10 +38,11 @@ function isSevenAmLocal(timezone: string | null): boolean {
  * (used by the test-send API and the digest:preview script).
  */
 export async function sendWeeklyDigests(
+  tenantId: string,
   opts: { ignoreTimezone?: boolean } = {},
 ): Promise<DigestResult> {
   const weekOf = getThisMonday();
-  const digests = await buildDigests(weekOf);
+  const digests = await buildDigests(tenantId, weekOf);
 
   if (!digests.length) {
     console.log('[digest] No pending digests for week of', weekOf.toISOString().slice(0, 10));
@@ -73,11 +74,11 @@ export async function sendWeeklyDigests(
 
 /**
  * Sends a single digest to a specific email address, overriding the owner's
- * real email. Used for test sends without touching production recipients.
+ * real email. Uses the first rep's data from the given tenant.
  */
-export async function sendTestDigest(toEmail: string): Promise<void> {
+export async function sendTestDigest(tenantId: string, toEmail: string): Promise<void> {
   const weekOf = getThisMonday();
-  const digests = await buildDigests(weekOf);
+  const digests = await buildDigests(tenantId, weekOf);
 
   if (!digests.length) {
     throw new Error('No pending digest data found for this week.');

@@ -3,6 +3,7 @@
  *
  * Prints this week's digest to the console for each rep without sending email.
  * Add --html to dump the full HTML of the first rep's email instead.
+ * Add --tenant <id> to restrict to a single tenant (default: first tenant).
  */
 import 'dotenv/config';
 import { buildDigests, getThisMonday } from '../digest/builder';
@@ -10,10 +11,24 @@ import { buildDigestText, buildDigestHtml } from '../digest/template';
 import { prisma } from '../db/client';
 
 async function main(): Promise<void> {
+  const tenantArgIdx = process.argv.indexOf('--tenant');
+  let tenantId: string;
+
+  if (tenantArgIdx !== -1 && process.argv[tenantArgIdx + 1]) {
+    tenantId = process.argv[tenantArgIdx + 1];
+  } else {
+    const tenant = await prisma.tenant.findFirst({ select: { id: true } });
+    if (!tenant) {
+      console.log('[digest:preview] No tenants found. Create one via POST /api/tenants/register.');
+      return;
+    }
+    tenantId = tenant.id;
+  }
+
   const weekOf = getThisMonday();
   console.log(`[digest:preview] Week of ${weekOf.toISOString().slice(0, 10)}\n`);
 
-  const digests = await buildDigests(weekOf);
+  const digests = await buildDigests(tenantId, weekOf);
 
   if (!digests.length) {
     console.log('[digest:preview] No pending digests for this week.');

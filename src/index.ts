@@ -1,11 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
+import helmet from 'helmet';
 import router from './api/index';
 import { startScheduler } from './scheduler/index';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 const app = express();
+app.use(helmet());
 app.use(express.json());
 app.use(router);
 

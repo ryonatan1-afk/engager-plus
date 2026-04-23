@@ -23,10 +23,11 @@ export interface SyncResult {
 
 /**
  * Pulls all contacts with CRM activity in the last 12 months from HubSpot,
- * resolves their country via the fallback chain, and upserts into the DB.
+ * resolves their country via the fallback chain, and upserts into the DB
+ * scoped to the given tenant.
  */
-export async function syncContacts(): Promise<SyncResult> {
-  const client = await getHubSpotClient();
+export async function syncContacts(tenantId: string): Promise<SyncResult> {
+  const client = await getHubSpotClient(tenantId);
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - ACTIVE_MONTHS);
   const cutoffMs = cutoff.getTime();
@@ -69,7 +70,7 @@ export async function syncContacts(): Promise<SyncResult> {
     // Batch-fetch company countries (up to 100 per batch)
     const companyCountries = await fetchCompanyCountries(client, companyIds);
 
-    // Upsert each contact
+    // Upsert each contact scoped to the tenant
     for (const contact of contacts) {
       try {
         const props = contact.properties;
@@ -86,8 +87,9 @@ export async function syncContacts(): Promise<SyncResult> {
         const lastActivityAt = lastActivityRaw ? new Date(Number(lastActivityRaw)) : null;
 
         await prisma.contact.upsert({
-          where: { hsObjectId: contact.id },
+          where: { tenantId_hsObjectId: { tenantId, hsObjectId: contact.id } },
           create: {
+            tenantId,
             hsObjectId: contact.id,
             firstName: props['firstname'] ?? null,
             lastName: props['lastname'] ?? null,
@@ -122,10 +124,12 @@ export async function syncContacts(): Promise<SyncResult> {
     cursor = response.paging?.next?.after;
   } while (cursor);
 
-  // Data quality report
-  const unknown = await prisma.contact.count({ where: { locationStatus: 'unknown' } });
+  // Data quality report (scoped to tenant)
+  const unknown = await prisma.contact.count({
+    where: { tenantId, locationStatus: 'unknown' },
+  });
   console.log(
-    `[syncContacts] Done. synced=${synced} errors=${errors} unknown_location=${unknown}`,
+    `[syncContacts][${tenantId}] Done. synced=${synced} errors=${errors} unknown_location=${unknown}`,
   );
 
   return { synced, unknown, errors };

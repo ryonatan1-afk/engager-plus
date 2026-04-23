@@ -45,22 +45,21 @@ async function generateWithRetry(prompt: string): Promise<string> {
 }
 
 /**
- * Generates AI greetings for all holiday matches that don't yet have one,
+ * Generates AI greetings for all ungreeted holiday matches for the given tenant,
  * where the holiday date is today or in the future.
  *
  * Designed to be idempotent — safe to re-run; already-generated greetings
  * are skipped via the `greeting: null` filter.
- *
- * Called by the Sunday night pre-generation cron (Phase 4 digest reads from cache).
  */
-export async function generatePendingGreetings(): Promise<GenerationResult> {
+export async function generatePendingGreetings(tenantId: string): Promise<GenerationResult> {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
   const matches = await prisma.holidayMatch.findMany({
     where: {
       greeting: null,
-      holiday: { date: { gte: today } },
+      holiday: { date: { gte: today }, greetable: true },
+      contact: { tenantId },
     },
     include: {
       contact: true,
@@ -80,7 +79,7 @@ export async function generatePendingGreetings(): Promise<GenerationResult> {
     ),
   ];
   const owners = await prisma.owner.findMany({
-    where: { hsOwnerId: { in: ownerIds } },
+    where: { tenantId, hsOwnerId: { in: ownerIds } },
     select: { hsOwnerId: true, firstName: true },
   });
   const ownerMap = new Map(owners.map((o) => [o.hsOwnerId, o.firstName ?? null]));
