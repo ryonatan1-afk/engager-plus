@@ -3,6 +3,8 @@ import rateLimit from 'express-rate-limit';
 import { getAuthorizationUrl, exchangeCode } from '../hubspot/auth';
 import { syncContacts } from '../hubspot/sync-contacts';
 import { syncOwners } from '../hubspot/sync-owners';
+import { refreshHolidayCacheFromContacts } from '../holidays/cache';
+import { runMatcher } from '../matcher/matcher';
 import { sendTestDigest, sendWeeklyDigests } from '../digest';
 import { prisma } from '../db/client';
 import { requireApiKey, requireAdminKey } from '../lib/auth-middleware';
@@ -161,6 +163,28 @@ router.post('/api/sync/owners', syncLimiter, async (req: Request, res: Response)
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[api] Owner sync failed:', err);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/** Refresh the holiday cache for all countries with resolved contacts */
+router.post('/api/sync/holidays', syncLimiter, async (_req: Request, res: Response) => {
+  try {
+    const result = await refreshHolidayCacheFromContacts();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[api] Holiday cache refresh failed:', err);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/** Run the holiday matcher for the authenticated tenant */
+router.post('/api/sync/matches', syncLimiter, async (req: Request, res: Response) => {
+  try {
+    const result = await runMatcher(req.tenant.id);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[api] Matcher failed:', err);
     res.status(500).json({ ok: false, error: String(err) });
   }
 });
