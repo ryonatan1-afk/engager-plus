@@ -24,16 +24,27 @@ export async function refreshHolidayCache(
 
   for (const countryCode of countryCodes) {
     for (const year of years) {
-      try {
-        const [national, religious] = await Promise.all([
-          fetchNationalHolidays(countryCode, year),
-          fetchReligiousHolidays(countryCode, year),
-        ]);
+      const [nationalResult, religiousResult] = await Promise.allSettled([
+        fetchNationalHolidays(countryCode, year),
+        fetchReligiousHolidays(countryCode, year),
+      ]);
 
-        const records = [...national, ...religious];
-        if (!records.length) continue;
+      const records = [
+        ...(nationalResult.status === 'fulfilled' ? nationalResult.value : []),
+        ...(religiousResult.status === 'fulfilled' ? religiousResult.value : []),
+      ];
 
-        for (const record of records) {
+      if (nationalResult.status === 'rejected') {
+        console.error(`[holidayCache] Nager failed for ${countryCode}/${year}:`, nationalResult.reason);
+        errors++;
+      }
+      if (religiousResult.status === 'rejected') {
+        console.error(`[holidayCache] OpenHolidays failed for ${countryCode}/${year}:`, religiousResult.reason);
+        errors++;
+      }
+
+      for (const record of records) {
+        try {
           await prisma.holiday.upsert({
             where: {
               countryIso_name_date_source: {
@@ -44,7 +55,6 @@ export async function refreshHolidayCache(
               },
             },
             create: record,
-            // On conflict: only update the classification tags, not core fields
             update: {
               greetable: record.greetable,
               popular: record.popular,
@@ -53,10 +63,10 @@ export async function refreshHolidayCache(
             },
           });
           upserted++;
+        } catch (err) {
+          console.error(`[holidayCache] Failed to upsert ${record.name} (${countryCode}):`, err);
+          errors++;
         }
-      } catch (err) {
-        console.error(`[holidayCache] Failed to refresh ${countryCode}/${year}:`, err);
-        errors++;
       }
     }
   }

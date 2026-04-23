@@ -105,7 +105,7 @@ NODE_ENV                 # set to "production" on Railway
 - `src/holidays/openholidays.ts` — religious/cultural (`significance: cultural`); alerts on `startDate`
 - `src/holidays/cache.ts` — `refreshHolidayCacheFromContacts()` pulls distinct country codes, fetches current + next year from both APIs
 - `src/matcher/matcher.ts` — 14-day rolling window; `weekOf` = Monday of holiday's week; `alert1d` = ≤1 day away
-- **Israel (IL)**: not covered by either Nager or Open Holidays APIs — will produce no matches
+- **Israel (IL)**: covered by Nager (national holidays); not covered by Open Holidays API (religious/cultural will be empty)
 
 ## Multi-tenancy (complete, 2026-04-23)
 - `Tenant` model — every company = one row with a unique `apiKey`
