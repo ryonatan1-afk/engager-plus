@@ -6,7 +6,6 @@ import { syncOwners } from '../hubspot/sync-owners';
 import { sendTestDigest, sendWeeklyDigests } from '../digest';
 import { prisma } from '../db/client';
 import { requireApiKey, requireAdminKey } from '../lib/auth-middleware';
-import '../types/express';
 
 const router = Router();
 
