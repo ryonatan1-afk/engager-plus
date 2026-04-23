@@ -26,8 +26,13 @@ export interface SyncResult {
  * resolves their country via the fallback chain, and upserts into the DB
  * scoped to the given tenant.
  */
-export async function syncContacts(tenantId: string): Promise<SyncResult> {
+export async function syncContacts(
+  tenantId: string,
+  opts: { activeOnly?: boolean } = {},
+): Promise<SyncResult> {
   const client = await getHubSpotClient(tenantId);
+  const activeOnly = opts.activeOnly ?? true;
+
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - ACTIVE_MONTHS);
   const cutoffMs = cutoff.getTime();
@@ -38,17 +43,9 @@ export async function syncContacts(tenantId: string): Promise<SyncResult> {
 
   do {
     const response = await client.crm.contacts.searchApi.doSearch({
-      filterGroups: [
-        {
-          filters: [
-            {
-              propertyName: 'hs_last_sales_activity_timestamp',
-              operator: 'GTE' as any,
-              value: cutoffMs.toString(),
-            },
-          ],
-        },
-      ],
+      filterGroups: activeOnly
+        ? [{ filters: [{ propertyName: 'hs_last_sales_activity_timestamp', operator: 'GTE' as any, value: cutoffMs.toString() }] }]
+        : [],
       properties: CONTACT_PROPERTIES,
       limit: PAGE_SIZE,
       after: cursor as any,

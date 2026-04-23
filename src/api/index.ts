@@ -141,10 +141,12 @@ router.use('/api', requireApiKey);
 
 // ── Manual triggers ───────────────────────────────────────────────────────────
 
-/** Manually trigger a contact sync for the authenticated tenant */
+/** Manually trigger a contact sync for the authenticated tenant.
+ *  Body: { "activeOnly": false } to skip the 12-month activity filter. */
 router.post('/api/sync/contacts', syncLimiter, async (req: Request, res: Response) => {
   try {
-    const result = await syncContacts(req.tenant.id);
+    const { activeOnly } = req.body as { activeOnly?: boolean };
+    const result = await syncContacts(req.tenant.id, { activeOnly: activeOnly ?? true });
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[api] Contact sync failed:', err);
