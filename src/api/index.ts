@@ -99,7 +99,12 @@ router.get('/auth/hubspot/callback', async (req: Request, res: Response) => {
 
   try {
     await exchangeCode(code as string, tenantId);
-    res.send('HubSpot connected successfully. You can close this window.');
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { apiKey: true } });
+    if (tenant) {
+      res.redirect('/setup/done?apiKey=' + tenant.apiKey);
+    } else {
+      res.send('HubSpot connected successfully.');
+    }
   } catch (err) {
     console.error('[auth] Token exchange failed:', err);
     res.status(500).send('Failed to exchange authorisation code. Check server logs.');

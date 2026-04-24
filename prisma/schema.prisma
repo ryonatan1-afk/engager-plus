@@ -33,6 +33,7 @@ enum HolidaySignificance {
 model Tenant {
   id        String   @id @default(uuid())
   name      String?
+  email     String?
   apiKey    String   @unique @map("api_key")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 

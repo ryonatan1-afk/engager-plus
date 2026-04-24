@@ -83,5 +83,5 @@
 - [ ] User preferences: mute contacts, adjust alert window — deferred, needs UI
 - [x] Logging + error alerting: `src/lib/alert.ts` sends email to `ALERT_EMAIL` on any cron failure; timestamps on all scheduler log lines
 - [x] Unsubscribe — DB column (`unsubscribed_at` on owners), Prisma migration done, builder filters unsubscribed owners
-- [ ] Unsubscribe — email footer link + `GET /unsubscribe?token=<hsOwnerId>` endpoint (next task)
+- [x] Unsubscribe — email footer link + `GET /unsubscribe?token=<hsOwnerId>` endpoint
 - [ ] Admin dashboard — deferred post-launch
