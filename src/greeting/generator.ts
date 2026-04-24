@@ -79,10 +79,10 @@ export async function generatePendingGreetings(tenantId: string): Promise<Genera
     ),
   ];
   const owners = await prisma.owner.findMany({
-    where: { tenantId, hsOwnerId: { in: ownerIds } },
-    select: { hsOwnerId: true, firstName: true },
+    where: { tenantId, externalId: { in: ownerIds } },
+    select: { externalId: true, firstName: true },
   });
-  const ownerMap = new Map(owners.map((o) => [o.hsOwnerId, o.firstName ?? null]));
+  const ownerMap = new Map(owners.map((o) => [o.externalId, o.firstName ?? null]));
 
   let generated = 0;
   let skipped = 0;

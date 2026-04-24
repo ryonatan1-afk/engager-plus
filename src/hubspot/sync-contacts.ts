@@ -1,6 +1,6 @@
 import { prisma } from '../db/client';
 import { getHubSpotClient } from './client';
-import { resolveLocation } from './resolve-location';
+import { resolveLocation } from '../lib/resolve-location';
 
 const ACTIVE_MONTHS = 12;
 const PAGE_SIZE = 100;
@@ -84,10 +84,10 @@ export async function syncContacts(
         const lastActivityAt = lastActivityRaw ? new Date(Number(lastActivityRaw)) : null;
 
         await prisma.contact.upsert({
-          where: { tenantId_hsObjectId: { tenantId, hsObjectId: contact.id } },
+          where: { tenantId_externalId: { tenantId, externalId: contact.id } },
           create: {
             tenantId,
-            hsObjectId: contact.id,
+            externalId: contact.id,
             firstName: props['firstname'] ?? null,
             lastName: props['lastname'] ?? null,
             email: props['email'] ?? null,

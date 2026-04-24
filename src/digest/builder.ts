@@ -101,9 +101,9 @@ export async function buildDigests(tenantId: string, weekOf: Date): Promise<Owne
 
   const ownerIds = [...byOwner.keys()];
   const owners = await prisma.owner.findMany({
-    where: { tenantId, hsOwnerId: { in: ownerIds }, unsubscribedAt: null },
+    where: { tenantId, externalId: { in: ownerIds }, unsubscribedAt: null },
   });
-  const ownerMap = new Map(owners.map((o) => [o.hsOwnerId, o]));
+  const ownerMap = new Map(owners.map((o) => [o.externalId, o]));
 
   const digests: OwnerDigest[] = [];
 

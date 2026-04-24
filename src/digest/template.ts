@@ -51,15 +51,16 @@ function renderCard(card: ContactCard): string {
 
 export function buildDigestHtml(params: {
   ownerFirstName: string | null;
-  ownerHsId: string;
+  ownerExternalId: string;
   weekOf: Date;
   todayCards: ContactCard[];
   weekCards: ContactCard[];
   laterCards: ContactCard[];
   totalMatches: number;
   baseUrl: string;
+  crmContactsUrl?: string;
 }): string {
-  const { ownerFirstName, ownerHsId, weekOf, todayCards, weekCards, laterCards, totalMatches, baseUrl } = params;
+  const { ownerFirstName, ownerExternalId, weekOf, todayCards, weekCards, laterCards, totalMatches, baseUrl, crmContactsUrl } = params;
 
   const salutation = ownerFirstName ? `Hi ${ownerFirstName},` : 'Hi,';
   const weekLabel = weekOf.toLocaleDateString('en-US', {
@@ -91,7 +92,9 @@ export function buildDigestHtml(params: {
 
   const overflowFooter =
     overflow > 0
-      ? `<p style="text-align:center;margin:20px 0 0;"><a href="https://app.hubspot.com/contacts/" style="color:#6366f1;font-size:14px;">+${overflow} more contact${overflow === 1 ? '' : 's'} &mdash; view in HubSpot &rarr;</a></p>`
+      ? crmContactsUrl
+        ? `<p style="text-align:center;margin:20px 0 0;"><a href="${crmContactsUrl}" style="color:#6366f1;font-size:14px;">+${overflow} more contact${overflow === 1 ? '' : 's'} &mdash; view all contacts &rarr;</a></p>`
+        : `<p style="text-align:center;margin:20px 0 0;color:#6b7280;font-size:14px;">+${overflow} more contact${overflow === 1 ? '' : 's'} not shown</p>`
       : '';
 
   return `<!DOCTYPE html>
@@ -123,8 +126,8 @@ export function buildDigestHtml(params: {
 
     <!-- Footer -->
     <div style="background:#e5e7eb;padding:14px 24px;border-radius:0 0 10px 10px;text-align:center;">
-      <p style="color:#9ca3af;font-size:12px;margin:0;">You're receiving this digest because you use Holiday Digest for HubSpot.</p>
-      <p style="color:#9ca3af;font-size:12px;margin:6px 0 0;"><a href="${baseUrl}/unsubscribe?token=${ownerHsId}" style="color:#9ca3af;">Unsubscribe</a></p>
+      <p style="color:#9ca3af;font-size:12px;margin:0;">You're receiving this because you use Rapport.</p>
+      <p style="color:#9ca3af;font-size:12px;margin:6px 0 0;"><a href="${baseUrl}/unsubscribe?token=${ownerExternalId}" style="color:#9ca3af;">Unsubscribe</a></p>
     </div>
 
   </div>
@@ -183,7 +186,7 @@ export function buildDigestText(params: {
     lines.push('');
   }
 
-  if (overflow > 0) lines.push(`+${overflow} more — view in HubSpot: https://app.hubspot.com/contacts/`);
+  if (overflow > 0) lines.push(`+${overflow} more contacts not shown`);
 
   return lines.join('\n');
 }

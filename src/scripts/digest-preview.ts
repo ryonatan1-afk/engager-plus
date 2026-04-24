@@ -47,7 +47,7 @@ async function main(): Promise<void> {
     const laterCards = first.cards.filter((c) => c.daysUntil >= 6);
     const html = buildDigestHtml({
       ownerFirstName: first.ownerFirstName,
-      ownerHsId: first.ownerId,
+      ownerExternalId: first.ownerId,
       weekOf,
       todayCards,
       weekCards,

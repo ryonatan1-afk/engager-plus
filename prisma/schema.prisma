@@ -47,7 +47,7 @@ model Tenant {
 model Contact {
   id             String         @id @default(uuid())
   tenantId       String         @map("tenant_id")
-  hsObjectId     String         @map("hs_object_id")
+  externalId     String         @map("external_id")
   firstName      String?        @map("first_name")
   lastName       String?        @map("last_name")
   email          String?
@@ -61,7 +61,7 @@ model Contact {
   tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   matches HolidayMatch[]
 
-  @@unique([tenantId, hsObjectId])
+  @@unique([tenantId, externalId])
   @@map("contacts")
 }
 
@@ -118,7 +118,7 @@ model Greeting {
 model Owner {
   id             String    @id @default(uuid())
   tenantId       String    @map("tenant_id")
-  hsOwnerId      String    @map("hs_owner_id")
+  externalId     String    @map("external_id")
   email          String
   firstName      String?   @map("first_name")
   timezone       String?
@@ -127,7 +127,7 @@ model Owner {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, hsOwnerId])
+  @@unique([tenantId, externalId])
   @@map("owners")
 }
 

@@ -17,7 +17,14 @@
       "Bash(git branch *)",
       "Bash(git push *)",
       "Bash(git tag *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx tsc *)",
+      "Bash(curl *)",
+      "Bash(python3 \"C:/Users/ryona/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"B2B SaaS onboarding setup wizard clean professional\" --design-system -p \"Rapport\" -f markdown)",
+      "Bash(sed 's|from '\\\\''./normalise-country'\\\\''|from '\\\\''./normalise-country'\\\\''|g' src/hubspot/normalise-country.test.ts)",
+      "Bash(sed 's|from '\\\\''./resolve-location'\\\\''|from '\\\\''./resolve-location'\\\\''|g' src/hubspot/resolve-location.test.ts)",
+      "Bash(rm src/hubspot/country-map.ts src/hubspot/normalise-country.ts src/hubspot/resolve-location.ts src/hubspot/normalise-country.test.ts src/hubspot/resolve-location.test.ts)",
+      "Bash(npm test *)"
     ]
   }
 }

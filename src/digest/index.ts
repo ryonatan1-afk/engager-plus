@@ -99,7 +99,7 @@ async function sendOneDigest(digest: OwnerDigest, weekOf: Date): Promise<void> {
 
   const html = buildDigestHtml({
     ownerFirstName: digest.ownerFirstName,
-    ownerHsId: digest.ownerId,
+    ownerExternalId: digest.ownerId,
     weekOf,
     todayCards,
     weekCards,

@@ -122,7 +122,7 @@ router.get('/unsubscribe', unsubscribeLimiter, async (req: Request, res: Respons
   }
   try {
     const updated = await prisma.owner.updateMany({
-      where: { hsOwnerId: token, unsubscribedAt: null },
+      where: { externalId: token, unsubscribedAt: null },
       data: { unsubscribedAt: new Date() },
     });
     if (updated.count === 0) {
@@ -250,7 +250,7 @@ router.get('/api/data-quality', async (req: Request, res: Response) => {
       prisma.contact.count({ where: { tenantId } }),
       prisma.contact.findMany({
         where: { tenantId, locationStatus: 'unknown' },
-        select: { hsObjectId: true, firstName: true, lastName: true, email: true, company: true },
+        select: { externalId: true, firstName: true, lastName: true, email: true, company: true },
         take: 50,
         orderBy: { syncedAt: 'desc' },
       }),

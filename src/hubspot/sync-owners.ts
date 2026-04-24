@@ -29,10 +29,10 @@ export async function syncOwners(tenantId: string): Promise<OwnerSyncResult> {
       for (const owner of response.results) {
         try {
           await prisma.owner.upsert({
-            where: { tenantId_hsOwnerId: { tenantId, hsOwnerId: owner.id.toString() } },
+            where: { tenantId_externalId: { tenantId, externalId: owner.id.toString() } },
             create: {
               tenantId,
-              hsOwnerId: owner.id.toString(),
+              externalId: owner.id.toString(),
               email: owner.email ?? '',
               firstName: owner.firstName ?? null,
               timezone: null,
