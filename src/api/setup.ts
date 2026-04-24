@@ -30,9 +30,10 @@ router.post('/setup/start', async (req: Request, res: Response) => {
     await prisma.tenant.create({ data: { name: name.trim(), email: email.trim(), apiKey } });
     res.redirect('/auth/hubspot?apiKey=' + apiKey);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[setup] Tenant creation failed:', err);
     res.status(500).setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(setupPageHtml('Something went wrong. Please try again.'));
+    res.send(setupPageHtml('Something went wrong: ' + msg));
   }
 });
 
