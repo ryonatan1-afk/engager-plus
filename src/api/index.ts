@@ -6,6 +6,7 @@ import { syncOwners } from '../hubspot/sync-owners';
 import { refreshHolidayCacheFromContacts } from '../holidays/cache';
 import { runMatcher } from '../matcher/matcher';
 import { sendTestDigest, sendWeeklyDigests } from '../digest';
+import { sendWelcomeEmail } from '../digest/sender';
 import { prisma } from '../db/client';
 import { requireApiKey, requireAdminKey } from '../lib/auth-middleware';
 
@@ -99,8 +100,13 @@ router.get('/auth/hubspot/callback', async (req: Request, res: Response) => {
 
   try {
     await exchangeCode(code as string, tenantId);
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { apiKey: true } });
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { apiKey: true, email: true } });
     if (tenant) {
+      if (tenant.email) {
+        sendWelcomeEmail(tenant.email, tenant.apiKey).catch((err) =>
+          console.error('[auth] Welcome email failed:', err),
+        );
+      }
       res.redirect('/setup/done?apiKey=' + tenant.apiKey);
     } else {
       res.send('HubSpot connected successfully.');

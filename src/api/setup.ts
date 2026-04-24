@@ -257,48 +257,17 @@ function donePageHtml(apiKey: string): string {
   justify-content: center;
   margin-bottom: 18px;
 }
-.api-box {
-  background: #F8FAFC;
-  border: 1.5px solid #E2E8F0;
-  border-radius: 10px;
-  padding: 13px 16px;
+.email-sent-box {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
-}
-.api-key-text {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 12.5px;
-  color: #374151;
-  letter-spacing: 0.4px;
-  word-break: break-all;
-  flex: 1;
-}
-.copy-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: none;
-  border: 1.5px solid #CBD5E1;
-  border-radius: 8px;
-  padding: 6px 11px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  cursor: pointer;
-  transition: border-color 150ms ease, color 150ms ease;
-}
-.copy-btn:hover { border-color: #0369A1; color: #0369A1; }
-.copy-btn.copied { border-color: #16A34A; color: #16A34A; }
-.key-note {
-  font-size: 12px;
-  color: #64748B;
-  margin-bottom: 24px;
-  line-height: 1.5;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #1E40AF;
+  margin-bottom: 20px;
 }
 .sync-box {
   border: 1px solid #E2E8F0;
@@ -351,17 +320,12 @@ function donePageHtml(apiKey: string): string {
         '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M4.5 11.5L9 16L17.5 6" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '</div>\n' +
       '<h1>HubSpot connected!</h1>\n' +
-      '<p class="subtitle" style="margin-bottom:22px">Your account is ready. Keep your API key somewhere safe.</p>\n' +
+      '<p class="subtitle" style="margin-bottom:22px">You\'re all set. We\'ve sent your account details to the email address you registered with.</p>\n' +
 
-      '<label>API key</label>\n' +
-      '<div class="api-box">\n' +
-        '<span class="api-key-text" id="api-key-text">' + apiKey + '</span>\n' +
-        '<button class="copy-btn" id="copy-btn" onclick="copyKey()" type="button">\n' +
-          '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="4.5" y="4.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M8.5 4.5V3A1.5 1.5 0 0 0 7 1.5H3A1.5 1.5 0 0 0 1.5 3v4A1.5 1.5 0 0 0 3 8.5h1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>\n' +
-          'Copy\n' +
-        '</button>\n' +
+      '<div class="email-sent-box">\n' +
+        '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="flex-shrink:0;color:#0369A1"><rect x="2" y="4" width="14" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 6l7 5 7-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>\n' +
+        '<span>Check your inbox &mdash; your API key is waiting there.</span>\n' +
       '</div>\n' +
-      '<p class="key-note">Use this in the <code>Authorization: Bearer &lt;key&gt;</code> header for API calls.</p>\n' +
 
       '<div class="sync-box">\n' +
         '<div class="sync-title">Initial contact sync</div>\n' +
@@ -391,20 +355,6 @@ function donePageHtml(apiKey: string): string {
 
     '<script>\n' +
     'var API_KEY = "' + apiKey + '";\n' +
-    'var copyIconSvg = \'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="4.5" y="4.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M8.5 4.5V3A1.5 1.5 0 0 0 7 1.5H3A1.5 1.5 0 0 0 1.5 3v4A1.5 1.5 0 0 0 3 8.5h1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>\';\n' +
-    'var checkIconSvg = \'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 7l3.5 3.5L11.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>\';\n' +
-    '\n' +
-    'function copyKey() {\n' +
-    '  navigator.clipboard.writeText(API_KEY).then(function() {\n' +
-    '    var btn = document.getElementById("copy-btn");\n' +
-    '    btn.classList.add("copied");\n' +
-    '    btn.innerHTML = checkIconSvg + " Copied!";\n' +
-    '    setTimeout(function() {\n' +
-    '      btn.classList.remove("copied");\n' +
-    '      btn.innerHTML = copyIconSvg + " Copy";\n' +
-    '    }, 2500);\n' +
-    '  });\n' +
-    '}\n' +
     '\n' +
     'async function triggerSync() {\n' +
     '  try {\n' +
