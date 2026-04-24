@@ -103,7 +103,7 @@ router.get('/auth/hubspot/callback', async (req: Request, res: Response) => {
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { apiKey: true, email: true } });
     if (tenant) {
       if (tenant.email) {
-        sendWelcomeEmail(tenant.email, tenant.apiKey).catch((err) =>
+        sendWelcomeEmail(tenant.email).catch((err) =>
           console.error('[auth] Welcome email failed:', err),
         );
       }
