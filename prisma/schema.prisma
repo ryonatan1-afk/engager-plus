@@ -31,11 +31,12 @@ enum HolidaySignificance {
 }
 
 model Tenant {
-  id        String   @id @default(uuid())
-  name      String?
-  email     String?
-  apiKey    String   @unique @map("api_key")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                  String    @id @default(uuid())
+  name                String?
+  email               String?
+  apiKey              String    @unique @map("api_key")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  locationNudgeSentAt DateTime? @map("location_nudge_sent_at") @db.Timestamptz
 
   contacts Contact[]
   owners   Owner[]

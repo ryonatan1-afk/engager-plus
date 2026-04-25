@@ -39,6 +39,47 @@ export async function sendWelcomeEmail(toEmail: string): Promise<void> {
   if (error) throw new Error(`Resend error: ${error.message}`);
 }
 
+export async function sendLocationNudgeEmail(
+  toEmail: string,
+  unknown: { firstName?: string | null; lastName?: string | null; company?: string | null }[],
+  totalUnknown: number,
+): Promise<void> {
+  const resend = getClient();
+
+  const shown = unknown.slice(0, 10);
+  const remainder = totalUnknown - shown.length;
+
+  const contactLines = shown
+    .map(c => {
+      const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown name';
+      return c.company ? `  • ${name} (${c.company})` : `  • ${name}`;
+    })
+    .join('\n');
+
+  const remainderLine = remainder > 0 ? `\n  …and ${remainder} more\n` : '';
+
+  const text = [
+    `Hi,`,
+    ``,
+    `Your HubSpot contacts have synced — but ${totalUnknown} contact${totalUnknown === 1 ? '' : 's'} ${totalUnknown === 1 ? "doesn't" : "don't"} have a country set, so ${totalUnknown === 1 ? 'it' : 'they'} won't appear in your holiday digest.`,
+    ``,
+    `Here's who's affected:`,
+    ``,
+    contactLines + remainderLine,
+    `To fix this, add the "Country" field to these contacts in HubSpot. Rapport picks up changes automatically on the next daily sync.`,
+    ``,
+    `— The Rapport team`,
+  ].join('\n');
+
+  const { error } = await resend.emails.send({
+    from: `Rapport <${FROM_EMAIL}>`,
+    to: toEmail,
+    subject: `Action needed: ${totalUnknown} contact${totalUnknown === 1 ? '' : 's'} missing from your digest`,
+    text,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+}
+
 export async function sendDigestEmail(params: {
   toEmail: string;
   toName: string;

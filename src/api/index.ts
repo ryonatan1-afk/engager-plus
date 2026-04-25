@@ -6,7 +6,7 @@ import { syncOwners } from '../hubspot/sync-owners';
 import { refreshHolidayCacheFromContacts } from '../holidays/cache';
 import { runMatcher } from '../matcher/matcher';
 import { sendTestDigest, sendWeeklyDigests } from '../digest';
-import { sendWelcomeEmail } from '../digest/sender';
+import { sendWelcomeEmail, sendLocationNudgeEmail } from '../digest/sender';
 import { prisma } from '../db/client';
 import { requireApiKey, requireAdminKey } from '../lib/auth-middleware';
 
@@ -161,6 +161,13 @@ router.post('/api/sync/contacts', syncLimiter, async (req: Request, res: Respons
     const { activeOnly } = req.body as { activeOnly?: boolean };
     const result = await syncContacts(req.tenant.id, { activeOnly: activeOnly ?? true });
     res.json({ ok: true, ...result });
+
+    // One-time nudge after the first sync: surface contacts with no country
+    if (!req.tenant.locationNudgeSentAt && req.tenant.email) {
+      maybeSendLocationNudge(req.tenant.id, req.tenant.email).catch(err =>
+        console.error('[sync] Location nudge failed:', err),
+      );
+    }
   } catch (err) {
     console.error('[api] Contact sync failed:', err);
     res.status(500).json({ ok: false, error: String(err) });
@@ -273,5 +280,29 @@ router.get('/api/data-quality', async (req: Request, res: Response) => {
     res.status(500).json({ ok: false, error: String(err) });
   }
 });
+
+async function maybeSendLocationNudge(tenantId: string, email: string): Promise<void> {
+  // Stamp first to prevent double-sends if two syncs overlap
+  const updated = await prisma.tenant.updateMany({
+    where: { id: tenantId, locationNudgeSentAt: null },
+    data: { locationNudgeSentAt: new Date() },
+  });
+  if (updated.count === 0) return; // another request already handled it
+
+  const [unknownContacts, totalUnknown] = await Promise.all([
+    prisma.contact.findMany({
+      where: { tenantId, locationStatus: 'unknown' },
+      select: { firstName: true, lastName: true, company: true },
+      take: 10,
+      orderBy: { syncedAt: 'desc' },
+    }),
+    prisma.contact.count({ where: { tenantId, locationStatus: 'unknown' } }),
+  ]);
+
+  if (totalUnknown === 0) return;
+
+  await sendLocationNudgeEmail(email, unknownContacts, totalUnknown);
+  console.log(`[sync] Location nudge sent to ${email}: ${totalUnknown} unknown contacts`);
+}
 
 export default router;
