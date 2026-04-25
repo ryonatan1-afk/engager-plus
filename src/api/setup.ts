@@ -27,13 +27,27 @@ router.post('/setup/start', async (req: Request, res: Response) => {
   try {
     const raw = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '');
     const apiKey = raw.slice(0, 40);
-    await prisma.tenant.create({ data: { name: name.trim(), email: email.trim(), apiKey } });
+    const data = { name: name.trim(), email: email.trim(), apiKey };
+    try {
+      await prisma.tenant.create({ data });
+    } catch (firstErr) {
+      const msg = firstErr instanceof Error ? firstErr.message : String(firstErr);
+      if (!msg.includes("Can't reach database server")) throw firstErr;
+      // Neon free tier cold start — wait for it to wake up and retry once
+      await new Promise(r => setTimeout(r, 2500));
+      await prisma.tenant.create({ data });
+    }
     res.redirect('/auth/hubspot?apiKey=' + apiKey);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[setup] Tenant creation failed:', err);
+    const isConnErr = msg.includes("Can't reach database server");
     res.status(500).setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(setupPageHtml('Something went wrong: ' + msg));
+    res.send(setupPageHtml(
+      isConnErr
+        ? 'Service is starting up — please try again in a few seconds.'
+        : 'Something went wrong. Please try again.'
+    ));
   }
 });
 
