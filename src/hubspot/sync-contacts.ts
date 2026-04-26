@@ -44,7 +44,10 @@ export async function syncContacts(
   do {
     const response = await client.crm.contacts.searchApi.doSearch({
       filterGroups: activeOnly
-        ? [{ filters: [{ propertyName: 'hs_last_sales_activity_timestamp', operator: 'GTE' as any, value: cutoffMs.toString() }] }]
+        ? [
+            { filters: [{ propertyName: 'hs_last_sales_activity_timestamp', operator: 'GTE' as any, value: cutoffMs.toString() }] },
+            { filters: [{ propertyName: 'hs_last_sales_activity_timestamp', operator: 'NOT_HAS_PROPERTY' as any }] },
+          ]
         : [],
       properties: CONTACT_PROPERTIES,
       limit: PAGE_SIZE,
