@@ -271,18 +271,6 @@ function donePageHtml(apiKey: string): string {
   justify-content: center;
   margin-bottom: 18px;
 }
-.email-sent-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  border-radius: 10px;
-  padding: 14px 16px;
-  font-size: 13px;
-  color: #1E40AF;
-  margin-bottom: 20px;
-}
 .sync-box {
   border: 1px solid #E2E8F0;
   border-radius: 12px;
@@ -335,11 +323,6 @@ function donePageHtml(apiKey: string): string {
       '</div>\n' +
       '<h1>HubSpot connected!</h1>\n' +
       '<p class="subtitle" style="margin-bottom:22px">You\'re all set. We\'ve sent your account details to the email address you registered with.</p>\n' +
-
-      '<div class="email-sent-box">\n' +
-        '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="flex-shrink:0;color:#0369A1"><rect x="2" y="4" width="14" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 6l7 5 7-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>\n' +
-        '<span>Check your inbox &mdash; your API key is waiting there.</span>\n' +
-      '</div>\n' +
 
       '<div class="sync-box">\n' +
         '<div class="sync-title">Initial contact sync</div>\n' +
