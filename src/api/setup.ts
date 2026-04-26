@@ -254,6 +254,7 @@ function setupPageHtml(error?: string): string {
           '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>\n' +
         '</button>\n' +
       '</form>\n' +
+      '<p style="font-size:12px;color:#94A3B8;text-align:center;margin-top:16px">We only store your contacts’ names, company, and country — nothing else.</p>\n' +
     '</div>\n' +
     '</body>\n</html>';
 }
