@@ -360,13 +360,14 @@ function donePageHtml(apiKey: string): string {
     '    await fetch("/api/sync/owners", { method: "POST", headers: headers });\n' +
     '    var res = await fetch("/api/sync/contacts", { method: "POST", headers: headers, body: JSON.stringify({ activeOnly: true }) });\n' +
     '    var data = await res.json();\n' +
-    '    document.getElementById("sync-text").textContent = typeof data.synced === "number" ? data.synced + " contacts synced — matching holidays\\u2026" : "Matching holidays\\u2026";\n' +
+    '    document.getElementById("sync-text").textContent = typeof data.synced === "number" ? data.synced + " contacts synced — preparing your digest\\u2026" : "Preparing your digest\\u2026";\n' +
     '    await fetch("/api/sync/holidays", { method: "POST", headers: headers });\n' +
     '    await fetch("/api/sync/matches", { method: "POST", headers: headers });\n' +
     '    await fetch("/api/sync/greetings", { method: "POST", headers: headers });\n' +
+    '    await fetch("/api/digest/send", { method: "POST", headers: headers, body: JSON.stringify({ confirm: true }) });\n' +
     '    document.getElementById("sync-spinner").style.display = "none";\n' +
     '    document.getElementById("sync-check").style.display = "flex";\n' +
-    '    document.getElementById("sync-text").textContent = typeof data.synced === "number" ? data.synced + " contacts synced" : "Sync complete";\n' +
+    '    document.getElementById("sync-text").textContent = "All set! Check your inbox for your first digest.";\n' +
     '  } catch (e) {\n' +
     '    document.getElementById("sync-spinner").style.display = "none";\n' +
     '    document.getElementById("sync-text").textContent = "Sync will run automatically tonight.";\n' +
