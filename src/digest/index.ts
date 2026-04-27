@@ -122,10 +122,12 @@ async function sendOneDigest(digest: OwnerDigest, weekOf: Date): Promise<void> {
   });
 
   // Mark all shown matches as notified so they don't appear in future sends
+  const allMatchIds = digest.cards.flatMap((c) => c.contacts.map((r) => r.matchId));
   await prisma.holidayMatch.updateMany({
-    where: { id: { in: digest.cards.map((c) => c.matchId) } },
+    where: { id: { in: allMatchIds } },
     data: { notifiedAt: new Date() },
   });
 
-  console.log(`[digest] Sent to ${digest.ownerEmail} (${digest.cards.length} contacts)`);
+  const totalContacts = digest.cards.reduce((n, c) => n + c.contacts.length, 0);
+  console.log(`[digest] Sent to ${digest.ownerEmail} (${digest.cards.length} holiday cards, ${totalContacts} contacts)`);
 }

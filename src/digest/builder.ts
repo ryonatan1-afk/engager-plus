@@ -1,24 +1,29 @@
 import { HolidaySignificance } from '@prisma/client';
 import { prisma } from '../db/client';
 
-export interface ContactCard {
+export interface ContactRow {
   matchId: string;
   contactFirstName: string;
   contactLastName: string | null;
   company: string | null;
   email: string | null;
   lastActivityAt: Date | null;
+  score: number;
+}
+
+export interface DigestCard {
   holidayName: string;
   holidayDate: Date;
   holidayType: string;
   significance: HolidaySignificance;
+  countryIso: string | null;
+  solemn: boolean;
+  alert1d: boolean;
   daysUntil: number;
   score: number;
   greeting: string | null;
   subject: string | null;
-  alert1d: boolean;
-  countryIso: string | null;
-  solemn: boolean;
+  contacts: ContactRow[];
 }
 
 export interface OwnerDigest {
@@ -26,14 +31,14 @@ export interface OwnerDigest {
   ownerEmail: string;
   ownerFirstName: string | null;
   timezone: string | null;
-  cards: ContactCard[];
+  cards: DigestCard[];
   totalMatches: number;
 }
 
-/** Max contact cards rendered per digest email */
+/** Max holiday cards rendered per digest email */
 const CARDS_PER_DIGEST = 10;
 
-/** Score threshold below which 6–7 day cards are dropped to overflow */
+/** Score threshold below which 6–7 day cards are dropped */
 const LATER_THRESHOLD = 4;
 
 const SIG_SCORE: Record<HolidaySignificance, number> = {
@@ -42,9 +47,6 @@ const SIG_SCORE: Record<HolidaySignificance, number> = {
   minor: 0,
 };
 
-/**
- * Returns the Monday (UTC) of the week containing `from`.
- */
 export function getThisMonday(from: Date = new Date()): Date {
   const d = new Date(from);
   d.setUTCHours(0, 0, 0, 0);
@@ -69,8 +71,9 @@ function relationshipScore(lastActivityAt: Date | null): number {
 
 /**
  * Queries all unnotified holiday matches for the given tenant and week, groups
- * them by owner. Applies dedup (one holiday per contact), scoring, urgency
- * filtering, and caps at CARDS_PER_DIGEST.
+ * them by owner then by holiday. Each DigestCard represents one holiday with
+ * all eligible contacts listed. Contacts are deduplicated to their best holiday
+ * first, then grouped so each contact appears in at most one card.
  */
 export async function buildDigests(tenantId: string, weekOf: Date): Promise<OwnerDigest[]> {
   const today = new Date();
@@ -113,7 +116,7 @@ export async function buildDigests(tenantId: string, weekOf: Date): Promise<Owne
     const owner = ownerMap.get(ownerId);
     if (!owner) continue;
 
-    // Dedup: one holiday per contact — keep highest significance, then soonest date
+    // Step 1: dedup — one holiday per contact (highest significance, then soonest)
     const bestByContact = new Map<string, (typeof ownerMatches)[number]>();
     for (const m of ownerMatches) {
       const existing = bestByContact.get(m.contact.id);
@@ -125,8 +128,9 @@ export async function buildDigests(tenantId: string, weekOf: Date): Promise<Owne
       }
     }
     const deduped = [...bestByContact.values()];
+    const totalMatches = deduped.length;
 
-    // Score and annotate each match
+    // Step 2: score each match
     const scored = deduped.map((m) => {
       const days = computeDaysUntil(today, m.holiday.date);
       const relScore = relationshipScore(m.contact.lastActivityAt);
@@ -135,43 +139,68 @@ export async function buildDigests(tenantId: string, weekOf: Date): Promise<Owne
       return { m, days, score };
     });
 
-    // Drop LATER THIS WEEK (6–7 days) cards below threshold, unless the holiday is popular
-    const visible = scored.filter(({ days, score, m }) =>
-      days <= 5 || score >= LATER_THRESHOLD || m.holiday.popular,
-    );
+    // Step 3: group by holiday
+    const byHoliday = new Map<string, typeof scored>();
+    for (const item of scored) {
+      const key = item.m.holidayId;
+      if (!byHoliday.has(key)) byHoliday.set(key, []);
+      byHoliday.get(key)!.push(item);
+    }
 
-    // Sort: highest score first, then soonest holiday
-    visible.sort((a, b) => b.score - a.score || a.days - b.days);
+    // Step 4: build DigestCards — one per holiday
+    const cards: DigestCard[] = [];
+    for (const [, group] of byHoliday) {
+      const { holiday } = group[0].m;
+      const days = group[0].days;
+      const cardScore = Math.max(...group.map((g) => g.score));
 
-    const totalMatches = deduped.length;
-    const capped = visible.slice(0, CARDS_PER_DIGEST);
+      // Drop LATER THIS WEEK cards below threshold
+      if (days >= 6 && cardScore < LATER_THRESHOLD && !holiday.popular) continue;
 
-    const cards: ContactCard[] = capped.map(({ m, days, score }) => ({
-      matchId: m.id,
-      contactFirstName: m.contact.firstName ?? '(unknown)',
-      contactLastName: m.contact.lastName ?? null,
-      company: m.contact.company ?? null,
-      email: m.contact.email ?? null,
-      lastActivityAt: m.contact.lastActivityAt ?? null,
-      holidayName: m.holiday.name,
-      holidayDate: m.holiday.date,
-      holidayType: m.holiday.type,
-      significance: m.holiday.significance,
-      daysUntil: days,
-      score,
-      greeting: m.greeting?.body ?? null,
-      subject: m.greeting?.subject ?? null,
-      alert1d: m.alert1d,
-      countryIso: m.contact.countryIso ?? null,
-      solemn: m.holiday.solemn,
-    }));
+      const alert1d = group.some((g) => g.m.alert1d);
+
+      // Sort contacts within card by score desc
+      group.sort((a, b) => b.score - a.score);
+
+      // Use greeting from the first match that has one
+      const withGreeting = group.find((g) => g.m.greeting);
+
+      cards.push({
+        holidayName: holiday.name,
+        holidayDate: holiday.date,
+        holidayType: holiday.type,
+        significance: holiday.significance,
+        countryIso: holiday.countryIso,
+        solemn: holiday.solemn,
+        alert1d,
+        daysUntil: days,
+        score: cardScore,
+        greeting: withGreeting?.m.greeting?.body ?? null,
+        subject: withGreeting?.m.greeting?.subject ?? null,
+        contacts: group.map((g) => ({
+          matchId: g.m.id,
+          contactFirstName: g.m.contact.firstName ?? '(unknown)',
+          contactLastName: g.m.contact.lastName ?? null,
+          company: g.m.contact.company ?? null,
+          email: g.m.contact.email ?? null,
+          lastActivityAt: g.m.contact.lastActivityAt ?? null,
+          score: g.score,
+        })),
+      });
+    }
+
+    // Step 5: sort cards, cap at CARDS_PER_DIGEST
+    cards.sort((a, b) => {
+      if (a.alert1d !== b.alert1d) return a.alert1d ? -1 : 1;
+      return b.score - a.score || a.holidayDate.getTime() - b.holidayDate.getTime();
+    });
 
     digests.push({
       ownerId,
       ownerEmail: owner.email,
       ownerFirstName: owner.firstName ?? null,
       timezone: owner.timezone ?? null,
-      cards,
+      cards: cards.slice(0, CARDS_PER_DIGEST),
       totalMatches,
     });
   }

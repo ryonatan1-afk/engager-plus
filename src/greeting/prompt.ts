@@ -44,13 +44,17 @@ export function buildPrompt(ctx: GreetingContext): string {
   const contactLine = [ctx.contactFirstName, ctx.contactLastName].filter(Boolean).join(' ');
   const companyLine = ctx.company ?? 'their company';
 
+  const namePlaceholderNote = ctx.contactFirstName === '[Name]'
+    ? '\nNote: Use "[Name]" literally as the placeholder where the contact\'s first name goes — it will be substituted automatically when sent.'
+    : '';
+
   return `Write a holiday greeting for my business contact.
 
 Contact: ${contactLine} at ${companyLine}, based in ${ctx.countryIso}
 Holiday: ${ctx.holidayName} on ${dateStr}
 My name (the sender): ${ctx.repFirstName}
 
-${languageGuidance}
+${languageGuidance}${namePlaceholderNote}
 
 Return a JSON object with "subject" (short email subject line) and "body" (2-3 sentence greeting, no salutation, no sign-off).`;
 }
