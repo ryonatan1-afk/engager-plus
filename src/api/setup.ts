@@ -353,28 +353,44 @@ function donePageHtml(apiKey: string): string {
 
     '<script>\n' +
     'var API_KEY = "' + apiKey + '";\n' +
+    'var headers = { "Authorization": "Bearer " + API_KEY };\n' +
+    'var total = 0, lastContacts = -1, stable = 0, polls = 0;\n' +
     '\n' +
-    'async function triggerSync() {\n' +
-    '  try {\n' +
-    '    var headers = { "Authorization": "Bearer " + API_KEY, "Content-Type": "application/json" };\n' +
-    '    await fetch("/api/sync/owners", { method: "POST", headers: headers });\n' +
-    '    var res = await fetch("/api/sync/contacts", { method: "POST", headers: headers, body: JSON.stringify({ activeOnly: true }) });\n' +
-    '    var data = await res.json();\n' +
-    '    document.getElementById("sync-text").textContent = typeof data.synced === "number" ? data.synced + " contacts synced — preparing your digest\\u2026" : "Preparing your digest\\u2026";\n' +
-    '    await fetch("/api/sync/holidays", { method: "POST", headers: headers });\n' +
-    '    await fetch("/api/sync/matches", { method: "POST", headers: headers });\n' +
-    '    await fetch("/api/sync/greetings", { method: "POST", headers: headers });\n' +
-    '    await fetch("/api/digest/send", { method: "POST", headers: headers, body: JSON.stringify({ confirm: true }) });\n' +
-    '    document.getElementById("sync-spinner").style.display = "none";\n' +
-    '    document.getElementById("sync-check").style.display = "flex";\n' +
-    '    document.getElementById("sync-text").textContent = "All set! Check your inbox for your first digest.";\n' +
-    '  } catch (e) {\n' +
-    '    document.getElementById("sync-spinner").style.display = "none";\n' +
-    '    document.getElementById("sync-text").textContent = "Sync will run automatically tonight.";\n' +
-    '  }\n' +
+    'function setText(t) { document.getElementById("sync-text").textContent = t; }\n' +
+    'function setDone(t) {\n' +
+    '  document.getElementById("sync-spinner").style.display = "none";\n' +
+    '  document.getElementById("sync-check").style.display = "flex";\n' +
+    '  setText(t);\n' +
     '}\n' +
     '\n' +
-    'triggerSync();\n' +
+    'async function init() {\n' +
+    '  try {\n' +
+    '    var r = await fetch("/api/contacts/count", { headers: headers });\n' +
+    '    var d = await r.json();\n' +
+    '    total = d.count || 0;\n' +
+    '    if (total > 0) setText("Syncing " + total + " contacts\\u2026");\n' +
+    '  } catch(e) {}\n' +
+    '  poll();\n' +
+    '}\n' +
+    '\n' +
+    'async function poll() {\n' +
+    '  polls++;\n' +
+    '  if (polls > 150) { setDone("Your first digest is on its way."); return; }\n' +
+    '  try {\n' +
+    '    var r = await fetch("/api/setup/status", { headers: headers });\n' +
+    '    var d = await r.json();\n' +
+    '    var contacts = d.contacts || 0, greetings = d.greetings || 0;\n' +
+    '    if (contacts === lastContacts) { stable++; } else { stable = 0; lastContacts = contacts; }\n' +
+    '    var label = total > 0 ? contacts + " / " + total + " contacts" : contacts + " contacts";\n' +
+    '    if (contacts === 0) setText(total > 0 ? "Syncing " + total + " contacts\\u2026" : "Setting up your account\\u2026");\n' +
+    '    else if (greetings === 0) setText(label + " synced \\u2014 preparing greetings\\u2026");\n' +
+    '    else setText(label + " synced \\u00b7 " + greetings + " greetings ready");\n' +
+    '    if (stable >= 6 && contacts > 0) { setDone("All set! Check your inbox for your first digest."); return; }\n' +
+    '  } catch(e) {}\n' +
+    '  setTimeout(poll, 2000);\n' +
+    '}\n' +
+    '\n' +
+    'init();\n' +
     '</script>\n' +
     '</body>\n</html>';
 }

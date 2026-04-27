@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { getAuthorizationUrl, exchangeCode } from '../hubspot/auth';
+import { getHubSpotClient } from '../hubspot/client';
 import { syncContacts } from '../hubspot/sync-contacts';
 import { syncOwners } from '../hubspot/sync-owners';
 import { refreshHolidayCacheFromContacts } from '../holidays/cache';
@@ -108,6 +109,10 @@ router.get('/auth/hubspot/callback', async (req: Request, res: Response) => {
           console.error('[auth] Welcome email failed:', err),
         );
       }
+      // Fire full setup pipeline in background — tab can be closed safely
+      runInitialSetup(tenantId, tenant.email ?? null).catch((err) =>
+        console.error('[auth] Background setup failed:', err),
+      );
       res.redirect('/setup/done?apiKey=' + tenant.apiKey);
     } else {
       res.send('HubSpot connected successfully.');
@@ -219,6 +224,42 @@ router.post('/api/sync/greetings', syncLimiter, async (req: Request, res: Respon
   }
 });
 
+/** Setup progress: returns synced contact + greeting counts for the tenant */
+router.get('/api/setup/status', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.tenant.id;
+    const [contacts, greetings] = await Promise.all([
+      prisma.contact.count({ where: { tenantId } }),
+      prisma.greeting.count({ where: { match: { contact: { tenantId } } } }),
+    ]);
+    res.json({ contacts, greetings });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/** Expected contact count from HubSpot (before or during sync) */
+router.get('/api/contacts/count', async (req: Request, res: Response) => {
+  try {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 12);
+    const client = await getHubSpotClient(req.tenant.id);
+    const response = await client.crm.contacts.searchApi.doSearch({
+      filterGroups: [
+        { filters: [{ propertyName: 'hs_last_sales_activity_timestamp', operator: 'GTE' as any, value: cutoff.getTime().toString() }] },
+        { filters: [{ propertyName: 'hs_last_sales_activity_timestamp', operator: 'NOT_HAS_PROPERTY' as any }] },
+      ],
+      properties: [],
+      limit: 1,
+      after: undefined as any,
+      sorts: [],
+    });
+    res.json({ count: response.total ?? 0 });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
 // ── Digest ────────────────────────────────────────────────────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -315,6 +356,22 @@ async function maybeSendLocationNudge(tenantId: string, email: string): Promise<
 
   await sendLocationNudgeEmail(email, unknownContacts, totalUnknown);
   console.log(`[sync] Location nudge sent to ${email}: ${totalUnknown} unknown contacts`);
+}
+
+async function runInitialSetup(tenantId: string, email: string | null): Promise<void> {
+  console.log(`[setup] Starting initial setup for tenant ${tenantId}`);
+  await syncOwners(tenantId);
+  await syncContacts(tenantId, { activeOnly: true });
+  if (email) {
+    maybeSendLocationNudge(tenantId, email).catch((err) =>
+      console.error('[setup] Location nudge failed:', err),
+    );
+  }
+  await refreshHolidayCacheFromContacts();
+  await runMatcher(tenantId);
+  await generatePendingGreetings(tenantId);
+  await sendWeeklyDigests(tenantId, { ignoreTimezone: true });
+  console.log(`[setup] Initial setup complete for tenant ${tenantId}`);
 }
 
 export default router;
