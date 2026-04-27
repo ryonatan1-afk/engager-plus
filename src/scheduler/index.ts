@@ -57,8 +57,8 @@ export function startScheduler(): void {
     }
   });
 
-  // Weekly holiday cache refresh: Sunday 3:00 AM — shared across all tenants
-  cron.schedule('0 3 * * 0', async () => {
+  // Daily holiday cache refresh at 2:45 AM — shared across all tenants
+  cron.schedule('45 2 * * *', async () => {
     console.log(`[scheduler][${ts()}] Starting weekly holiday cache refresh...`);
     try {
       await refreshHolidayCacheFromContacts();
@@ -95,7 +95,7 @@ export function startScheduler(): void {
   });
 
   console.log(
-    '[scheduler] Cron jobs registered: contact sync 02:00, owner sync 02:15, matcher 02:30, holiday refresh Sun 03:00, greeting pre-gen Sun 22:00, digest Mon 07:00 (tz-aware)',
+    '[scheduler] Cron jobs registered: contact sync 02:00, owner sync 02:15, matcher 02:30, holiday refresh 02:45, greeting pre-gen Sun 22:00, digest Mon 07:00 (tz-aware)',
   );
 }
 
