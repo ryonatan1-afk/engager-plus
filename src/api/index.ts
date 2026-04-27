@@ -5,6 +5,7 @@ import { syncContacts } from '../hubspot/sync-contacts';
 import { syncOwners } from '../hubspot/sync-owners';
 import { refreshHolidayCacheFromContacts } from '../holidays/cache';
 import { runMatcher } from '../matcher/matcher';
+import { generatePendingGreetings } from '../greeting/generator';
 import { sendTestDigest, sendWeeklyDigests } from '../digest';
 import { sendWelcomeEmail, sendLocationNudgeEmail } from '../digest/sender';
 import { prisma } from '../db/client';
@@ -203,6 +204,17 @@ router.post('/api/sync/matches', syncLimiter, async (req: Request, res: Response
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[api] Matcher failed:', err);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+/** Generate AI greetings for all ungreeted matches for the authenticated tenant */
+router.post('/api/sync/greetings', syncLimiter, async (req: Request, res: Response) => {
+  try {
+    const result = await generatePendingGreetings(req.tenant.id);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[api] Greeting generation failed:', err);
     res.status(500).json({ ok: false, error: String(err) });
   }
 });

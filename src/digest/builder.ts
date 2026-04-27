@@ -17,6 +17,8 @@ export interface ContactCard {
   greeting: string | null;
   subject: string | null;
   alert1d: boolean;
+  countryIso: string | null;
+  solemn: boolean;
 }
 
 export interface OwnerDigest {
@@ -160,6 +162,8 @@ export async function buildDigests(tenantId: string, weekOf: Date): Promise<Owne
       greeting: m.greeting?.body ?? null,
       subject: m.greeting?.subject ?? null,
       alert1d: m.alert1d,
+      countryIso: m.contact.countryIso ?? null,
+      solemn: m.holiday.solemn,
     }));
 
     digests.push({

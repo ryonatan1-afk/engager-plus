@@ -1,5 +1,25 @@
 import { ContactCard } from './builder';
 
+function countryFlag(iso: string): string {
+  return [...iso.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+}
+
+function countryName(iso: string): string {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(iso) ?? iso;
+  } catch {
+    return iso;
+  }
+}
+
+function holidayContext(type: string, solemn: boolean): string {
+  if (solemn) return 'Solemn occasion — consider a respectful tone';
+  if (type === 'national') return 'National public holiday';
+  if (type === 'religious') return 'Religious observance';
+  if (type === 'cultural') return 'Cultural observance';
+  return 'Public holiday';
+}
+
 function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -42,7 +62,7 @@ function renderCard(card: ContactCard): string {
       ${urgencyBadge}<strong style="font-size:15px;color:#111827;">${name}${company}</strong>
     </div>
     <p style="margin:0;color:#6366f1;font-weight:600;font-size:14px;">${card.holidayName}</p>
-    <p style="margin:4px 0 0;color:#6b7280;font-size:13px;">${formatDate(card.holidayDate)}</p>
+    <p style="margin:4px 0 0;color:#6b7280;font-size:13px;">${formatDate(card.holidayDate)}${card.countryIso ? ` &middot; ${countryFlag(card.countryIso)} ${countryName(card.countryIso)} &middot; ${holidayContext(card.holidayType, card.solemn)}` : ''}</p>
     ${lastActivity}
     ${greetingBlock}
     ${draftButton}

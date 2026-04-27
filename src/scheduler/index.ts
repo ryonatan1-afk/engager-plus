@@ -68,8 +68,8 @@ export function startScheduler(): void {
     }
   });
 
-  // Sunday 10:00 PM — pre-generate greetings (per tenant)
-  cron.schedule('0 22 * * 0', async () => {
+  // Daily greeting generation at 3:00 AM — after matcher (per tenant)
+  cron.schedule('0 3 * * *', async () => {
     console.log(`[scheduler][${ts()}] Starting Sunday greeting pre-generation...`);
     for (const tenantId of await getActiveTenants()) {
       try {
@@ -95,7 +95,7 @@ export function startScheduler(): void {
   });
 
   console.log(
-    '[scheduler] Cron jobs registered: contact sync 02:00, owner sync 02:15, matcher 02:30, holiday refresh 02:45, greeting pre-gen Sun 22:00, digest Mon 07:00 (tz-aware)',
+    '[scheduler] Cron jobs registered: contact sync 02:00, owner sync 02:15, matcher 02:30, holiday refresh 02:45, greeting gen 03:00, digest Mon 07:00 (tz-aware)',
   );
 }
 
