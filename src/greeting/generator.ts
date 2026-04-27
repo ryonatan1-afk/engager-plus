@@ -108,6 +108,7 @@ export async function generatePendingGreetings(tenantId: string): Promise<Genera
       holidayName: holiday.name,
       holidayDate: holiday.date,
       holidayType: holiday.type,
+      solemn: holiday.solemn,
       repFirstName,
     };
 

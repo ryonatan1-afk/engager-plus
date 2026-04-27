@@ -19,6 +19,10 @@ const NOT_GREETABLE_PATTERNS = [
   /tisha b.av/i,
   /day of silence/i,
   /day of fasting/i,
+  /truth and reconciliation/i,  // CA: residential school victims — day of mourning
+  /human rights day/i,          // ZA: Sharpeville massacre commemoration
+  /youth day/i,                  // ZA: Soweto Uprising — students killed by police
+  /army day/i,                   // CL: celebrating military is sensitive in Pinochet context
 ];
 
 const POPULAR_SUBSTRINGS = [

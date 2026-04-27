@@ -8,6 +8,7 @@ export interface GreetingContext {
   holidayName: string;
   holidayDate: Date;
   holidayType: HolidayType;
+  solemn: boolean;
   repFirstName: string;
 }
 
@@ -16,6 +17,7 @@ export const SYSTEM_PROMPT = `You are a professional sales representative writin
 Rules:
 - For national holidays, you can use direct language ("celebrating", "enjoying", etc.)
 - For religious or cultural holidays, use soft language ("may be celebrating", "might be observing") — country of residence does not imply religion or cultural practice
+- For solemn or historically significant occasions (e.g. Freedom Day, Day of Reconciliation, Australia Day), acknowledge the meaning of the day respectfully — do not use celebratory language like "Happy" or "Hope you enjoy"; instead use phrases like "thinking of you on", "hope the day is meaningful", or simply acknowledge what the day represents
 - The body must be 2-3 sentences. No salutation (no "Dear" or "Hi [name]"). No sign-off or sender name — the rep will add those.
 - The subject must be a short, natural email subject line (max 10 words) suited to the occasion.
 
@@ -33,8 +35,9 @@ export function buildPrompt(ctx: GreetingContext): string {
     timeZone: 'UTC',
   });
 
-  const languageGuidance =
-    ctx.holidayType === HolidayType.national
+  const languageGuidance = ctx.solemn
+    ? 'This is a historically significant or solemn occasion — use respectful, reflective language. Avoid "Happy" or "Hope you enjoy". Instead acknowledge the meaning of the day (e.g. "thinking of you on", "hope the day is meaningful").'
+    : ctx.holidayType === HolidayType.national
       ? 'This is a national holiday — direct language is appropriate (e.g. "celebrating", "enjoying the day").'
       : 'This is a religious or cultural holiday — use soft language (e.g. "may be celebrating", "might be observing") since country does not imply religion.';
 

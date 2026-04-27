@@ -11,6 +11,7 @@ function makeCtx(overrides: Partial<GreetingContext> = {}): GreetingContext {
     holidayName: 'Eid al-Fitr',
     holidayDate: new Date('2026-03-30T00:00:00.000Z'),
     holidayType: HolidayType.religious,
+    solemn: false,
     repFirstName: 'James',
     ...overrides,
   };
