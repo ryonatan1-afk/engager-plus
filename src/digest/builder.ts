@@ -75,13 +75,13 @@ function relationshipScore(lastActivityAt: Date | null): number {
  * all eligible contacts listed. Contacts are deduplicated to their best holiday
  * first, then grouped so each contact appears in at most one card.
  */
-export async function buildDigests(tenantId: string, weekOf: Date): Promise<OwnerDigest[]> {
+export async function buildDigests(tenantId: string, weekOf: Date | null): Promise<OwnerDigest[]> {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
   const matches = await prisma.holidayMatch.findMany({
     where: {
-      weekOf,
+      ...(weekOf ? { weekOf } : {}),
       notifiedAt: null,
       contact: { tenantId, ownerId: { not: null } },
       holiday: { greetable: true, regional: false },

@@ -39,10 +39,10 @@ function isSevenAmLocal(timezone: string | null): boolean {
  */
 export async function sendWeeklyDigests(
   tenantId: string,
-  opts: { ignoreTimezone?: boolean } = {},
+  opts: { ignoreTimezone?: boolean; allWeeks?: boolean } = {},
 ): Promise<DigestResult> {
   const weekOf = getThisMonday();
-  const digests = await buildDigests(tenantId, weekOf);
+  const digests = await buildDigests(tenantId, opts.allWeeks ? null : weekOf);
 
   if (!digests.length) {
     console.log('[digest] No pending digests for week of', weekOf.toISOString().slice(0, 10));
@@ -78,7 +78,7 @@ export async function sendWeeklyDigests(
  */
 export async function sendTestDigest(tenantId: string, toEmail: string): Promise<void> {
   const weekOf = getThisMonday();
-  const digests = await buildDigests(tenantId, weekOf);
+  const digests = await buildDigests(tenantId, null);
 
   if (!digests.length) {
     throw new Error('No pending digest data found for this week.');

@@ -370,7 +370,7 @@ async function runInitialSetup(tenantId: string, email: string | null): Promise<
   await refreshHolidayCacheFromContacts();
   await runMatcher(tenantId);
   await generatePendingGreetings(tenantId);
-  await sendWeeklyDigests(tenantId, { ignoreTimezone: true });
+  await sendWeeklyDigests(tenantId, { ignoreTimezone: true, allWeeks: true });
   console.log(`[setup] Initial setup complete for tenant ${tenantId}`);
 }
 
