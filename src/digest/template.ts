@@ -47,10 +47,10 @@ function renderContactRow(contact: ContactRow, card: DigestCard): string {
   const button = href
     ? `<a href="${href}" style="background:#6366f1;color:#fff;padding:5px 12px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">&#9993; Open draft</a>`
     : '';
-  return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;">
-    <span style="font-size:13px;color:#111827;font-weight:500;">${name}${company}</span>
-    ${button}
-  </div>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #f3f4f6;"><tr>
+    <td style="padding:7px 0;font-size:13px;color:#111827;font-weight:500;">${name}${company}</td>
+    <td style="padding:7px 0;text-align:right;white-space:nowrap;">${button}</td>
+  </tr></table>`;
 }
 
 function renderCard(card: DigestCard): string {
